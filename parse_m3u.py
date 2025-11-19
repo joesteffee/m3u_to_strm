@@ -7,6 +7,7 @@ import logging
 import requests
 from pathlib import Path
 from typing import Tuple, Optional, Set
+from datetime import datetime, timedelta
 
 # Configure logging to stdout
 logging.basicConfig(
@@ -29,6 +30,8 @@ REMOVE_ORPHANED = os.environ.get("REMOVE_ORPHANED", "false").lower() == "true"
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "0"))
 # Limit number of items (movies + series) to process per run (0 = no limit)
 MAX_ITEMS_PER_RUN = int(os.environ.get("MAX_ITEMS_PER_RUN", "0"))
+# Cache duration for M3U file in hours (default: 8 hours)
+M3U_CACHE_HOURS = int(os.environ.get("M3U_CACHE_HOURS", "8"))
 
 # Path mapping for Emby (container path -> host path)
 # If not set, assumes container paths match host paths
@@ -40,11 +43,40 @@ EMBY_LIVETV_PATH = os.environ.get("EMBY_LIVETV_PATH")
 TMP_PLAYLIST = Path("/tmp/playlist.m3u")
 
 def download_playlist():
-    logger.info(f"⬇️ Downloading playlist from {M3U_URL}")
-    resp = requests.get(M3U_URL)
-    resp.raise_for_status()
-    TMP_PLAYLIST.write_text(resp.text, encoding="utf-8")
-    logger.info(f"✅ Saved to {TMP_PLAYLIST}")
+    """
+    Download M3U playlist from remote source.
+    Only downloads if file doesn't exist, is empty, or is older than M3U_CACHE_HOURS.
+    """
+    # Check if we need to download
+    should_download = False
+    reason = ""
+    
+    if not TMP_PLAYLIST.exists():
+        should_download = True
+        reason = "file does not exist"
+    elif TMP_PLAYLIST.stat().st_size == 0:
+        should_download = True
+        reason = "file is empty"
+    else:
+        # Check file age
+        file_mtime = datetime.fromtimestamp(TMP_PLAYLIST.stat().st_mtime)
+        age = datetime.now() - file_mtime
+        cache_duration = timedelta(hours=M3U_CACHE_HOURS)
+        
+        if age > cache_duration:
+            should_download = True
+            reason = f"file is {age.total_seconds() / 3600:.1f} hours old (cache: {M3U_CACHE_HOURS} hours)"
+        else:
+            logger.info(f"ℹ️ Using cached playlist (age: {age.total_seconds() / 3600:.1f} hours, cache: {M3U_CACHE_HOURS} hours)")
+    
+    if should_download:
+        logger.info(f"⬇️ Downloading playlist from {M3U_URL} ({reason})")
+        resp = requests.get(M3U_URL)
+        resp.raise_for_status()
+        TMP_PLAYLIST.write_text(resp.text, encoding="utf-8")
+        logger.info(f"✅ Saved to {TMP_PLAYLIST}")
+    else:
+        logger.debug(f"Using existing playlist file: {TMP_PLAYLIST}")
 
 def safe_filename(name: str) -> str:
     # Remove invalid filesystem characters including # which can cause issues
