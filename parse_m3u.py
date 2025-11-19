@@ -205,7 +205,7 @@ def refresh_emby_item(item_id: str, update_type: str = "Update"):
 def refresh_emby_library_path(path: Path):
     """
     Trigger Emby library refresh for a specific path (for new items).
-    This is more efficient than a full library scan.
+    This triggers a library scan of the specified path to detect and add new files.
     """
     if not EMBY_SERVER_URL or not EMBY_API_KEY:
         return False
@@ -213,7 +213,10 @@ def refresh_emby_library_path(path: Path):
     try:
         # Convert container path to Emby host path
         emby_path = convert_to_emby_path(path)
-        logger.debug(f"Refreshing Emby library path: {emby_path} (container: {path})")
+        logger.debug(f"Triggering Emby library refresh for path: {emby_path} (container: {path})")
+        
+        # POST to Library/Refresh endpoint - this triggers an actual library scan/refresh
+        # The Path parameter tells Emby which directory to scan for new files
         url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Library/Refresh"
         params = {
             "Path": emby_path,
@@ -225,37 +228,48 @@ def refresh_emby_library_path(path: Path):
         
         resp = requests.post(url, params=params, headers=headers, timeout=10)
         resp.raise_for_status()
-        logger.info(f"✅ Emby library refresh triggered for {path}")
+        logger.info(f"✅ Emby library refresh triggered for {path} (will scan for new files)")
         return True
     except Exception as e:
-        logger.warning(f"⚠️ Error refreshing Emby library path {path}: {e}")
+        logger.warning(f"⚠️ Error triggering Emby library refresh for {path}: {e}")
         return False
 
-def notify_emby(filepath: Path, is_new: bool, url_changed: bool):
+def notify_emby_updated(filepath: Path):
     """
-    Notify Emby about a STRM file change.
-    For new files: trigger library refresh for the parent directory
-    For updated files: find item and refresh it directly (more efficient)
+    Notify Emby about an updated STRM file (URL changed).
+    Finds the item and refreshes it directly (more efficient than library scan).
     """
     if not EMBY_SERVER_URL or not EMBY_API_KEY:
         logger.debug(f"Emby notification skipped (not configured) for {filepath}")
         return
     
-    if is_new:
-        # For new items, trigger library refresh for the parent directory
-        # This will add the new item without a full library scan
+    # For updated items (URL changed), find the item and refresh it directly
+    # This avoids full library scans and only updates the specific item
+    item_id = get_emby_item_by_path(filepath)
+    if item_id:
+        refresh_emby_item(item_id, "Update")
+    else:
+        # If item not found, try library refresh as fallback
+        logger.warning(f"⚠️ Item not found in Emby for {filepath}, triggering library refresh")
         refresh_emby_library_path(filepath.parent)
-    elif url_changed:
-        # For updated items (URL changed), find the item and refresh it directly
-        # This avoids full library scans and only updates the specific item
-        item_id = get_emby_item_by_path(filepath)
-        if item_id:
-            refresh_emby_item(item_id, "Update")
-        else:
-            # If item not found, try library refresh as fallback
-            logger.warning(f"⚠️ Item not found in Emby for {filepath}, triggering library refresh")
-            refresh_emby_library_path(filepath.parent)
-    # If neither is_new nor url_changed, no notification needed
+
+def batch_refresh_directories(directories: Set[Path]):
+    """
+    Batch refresh multiple directories in Emby.
+    Only refreshes directories that actually have new files.
+    """
+    if not EMBY_SERVER_URL or not EMBY_API_KEY:
+        return
+    
+    if not directories:
+        return
+    
+    logger.info(f"Triggering Emby library refresh for {len(directories)} directory/directories with new files")
+    for directory in directories:
+        # For new items, trigger library refresh for the parent directory
+        # This will scan the directory and add new STRM files to Emby's library
+        # The Library/Refresh endpoint triggers an actual library scan, not just a search
+        refresh_emby_library_path(directory)
 
 def cleanup_empty_dirs(base_dir: Path):
     for d in base_dir.iterdir():
@@ -360,23 +374,59 @@ def process_playlist():
     # Track all processed files for orphan cleanup
     processed_movie_files = set()
     processed_series_files = set()
+    
+    # Track directories with new files for batch refresh
+    new_movie_directories = set()
+    new_series_directories = set()
 
     # Process movies
     logger.info(f"Processing {len(movies)} movie(s)")
+    movies_added = 0
+    movies_updated = 0
     for tvg_name, url in movies:
         folder_name = parse_movie_name(tvg_name)
         filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
         processed_movie_files.add(filepath)
-        notify_emby(filepath, is_new, url_changed)
+        if is_new:
+            movies_added += 1
+            # Track directory for batch refresh (only if new)
+            new_movie_directories.add(filepath.parent)
+        elif url_changed:
+            movies_updated += 1
+            # For updated files, refresh the specific item immediately
+            notify_emby_updated(filepath)
+    
+    if movies_added > 0 or movies_updated > 0:
+        logger.info(f"Movies: {movies_added} added, {movies_updated} updated")
+    
+    # Batch refresh directories with new movie files
+    if new_movie_directories:
+        batch_refresh_directories(new_movie_directories)
 
     # Process series
     logger.info(f"Processing {len(series)} series episode(s)")
+    series_added = 0
+    series_updated = 0
     for tvg_name, url in series:
         folder_name = parse_series_name(tvg_name)
         season, episode = extract_season_episode(tvg_name)
         filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
         processed_series_files.add(filepath)
-        notify_emby(filepath, is_new, url_changed)
+        if is_new:
+            series_added += 1
+            # Track directory for batch refresh (only if new)
+            new_series_directories.add(filepath.parent)
+        elif url_changed:
+            series_updated += 1
+            # For updated files, refresh the specific item immediately
+            notify_emby_updated(filepath)
+    
+    if series_added > 0 or series_updated > 0:
+        logger.info(f"Series: {series_added} added, {series_updated} updated")
+    
+    # Batch refresh directories with new series files
+    if new_series_directories:
+        batch_refresh_directories(new_series_directories)
 
     # Process live TV
     if live_tv:
