@@ -701,6 +701,52 @@ http://example.com/live/12345
         content = live_file.read_text()
         assert "Live Channel" in content
         assert "http://example.com/live/12345" in content
+    
+    def test_process_playlist_with_limit_skips_unchanged(self, caplog):
+        """Test that MAX_ITEMS_PER_RUN skips unchanged items and processes next batch"""
+        from parse_m3u import process_playlist
+        
+        # Create playlist with 5 movies
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="Movie 1 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 1 (2023)
+http://example.com/movie/1
+#EXTINF:-1 tvg-name="Movie 2 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 2 (2023)
+http://example.com/movie/2
+#EXTINF:-1 tvg-name="Movie 3 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 3 (2023)
+http://example.com/movie/3
+#EXTINF:-1 tvg-name="Movie 4 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 4 (2023)
+http://example.com/movie/4
+#EXTINF:-1 tvg-name="Movie 5 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 5 (2023)
+http://example.com/movie/5
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        # First run: Process with limit of 2
+        with patch('parse_m3u.MAX_ITEMS_PER_RUN', 2), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Verify first 2 movies were processed
+        movie_files = list(self.movies_dir.rglob("*.strm"))
+        assert len(movie_files) == 2
+        
+        # Second run: Should skip the 2 existing movies and process the next 2
+        with patch('parse_m3u.MAX_ITEMS_PER_RUN', 2), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Verify now 4 movies total (first 2 + next 2)
+        movie_files = list(self.movies_dir.rglob("*.strm"))
+        assert len(movie_files) == 4, f"Expected 4 movies after second run, got {len(movie_files)}"
+        
+        # Verify the correct movies were created
+        movie_names = {f.parent.name for f in movie_files}
+        assert "Movie 1 (2023)" in movie_names
+        assert "Movie 2 (2023)" in movie_names
+        assert "Movie 3 (2023)" in movie_names
+        assert "Movie 4 (2023)" in movie_names
 
 
 if __name__ == "__main__":

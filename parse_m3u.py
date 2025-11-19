@@ -448,15 +448,35 @@ def process_playlist():
     movies_added = 0
     movies_updated = 0
     movies_processed = 0
+    movies_skipped_unchanged = 0
     for tvg_name, url in movies:
-        # Check if limit reached
+        folder_name = parse_movie_name(tvg_name)
+        filepath = MOVIES_DIR / folder_name / f"{folder_name}.strm"
+        
+        # Check if file exists and hasn't changed (skip unchanged items, don't count towards limit)
+        is_unchanged = False
+        if filepath.exists():
+            try:
+                existing_url = filepath.read_text(encoding="utf-8").strip()
+                if existing_url == url:
+                    is_unchanged = True
+            except Exception:
+                pass
+        
+        # Skip unchanged items (don't count towards limit, but track for orphan cleanup)
+        if is_unchanged:
+            movies_skipped_unchanged += 1
+            processed_movie_files.add(filepath)
+            continue
+        
+        # Check if limit reached for items that need processing
         if MAX_ITEMS_PER_RUN > 0 and total_items_processed >= MAX_ITEMS_PER_RUN:
-            movies_skipped = len(movies) - movies_processed
+            movies_skipped = len(movies) - movies_processed - movies_skipped_unchanged
             items_limit_reached = True
             logger.warning(f"⚠️ Item processing limit reached ({MAX_ITEMS_PER_RUN}). Skipping remaining {movies_skipped} movie(s)")
             break
         
-        folder_name = parse_movie_name(tvg_name)
+        # Process the item (new or changed)
         filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
         processed_movie_files.add(filepath)
         total_items_processed += 1
@@ -471,7 +491,7 @@ def process_playlist():
             # For updated files, refresh the specific item immediately
             notify_emby_updated(filepath)
     
-    movies_skipped = len(movies) - movies_processed
+    movies_skipped = len(movies) - movies_processed - movies_skipped_unchanged
     if movies_added > 0 or movies_updated > 0:
         logger.info(f"Movies: {movies_added} added, {movies_updated} updated")
     if movies_skipped > 0:
@@ -486,16 +506,36 @@ def process_playlist():
     series_added = 0
     series_updated = 0
     series_processed = 0
+    series_skipped_unchanged = 0
     for tvg_name, url in series:
-        # Check if limit reached
+        folder_name = parse_series_name(tvg_name)
+        season, episode = extract_season_episode(tvg_name)
+        filepath = SERIES_DIR / folder_name / season / f"{episode}.strm"
+        
+        # Check if file exists and hasn't changed (skip unchanged items, don't count towards limit)
+        is_unchanged = False
+        if filepath.exists():
+            try:
+                existing_url = filepath.read_text(encoding="utf-8").strip()
+                if existing_url == url:
+                    is_unchanged = True
+            except Exception:
+                pass
+        
+        # Skip unchanged items (don't count towards limit, but track for orphan cleanup)
+        if is_unchanged:
+            series_skipped_unchanged += 1
+            processed_series_files.add(filepath)
+            continue
+        
+        # Check if limit reached for items that need processing
         if MAX_ITEMS_PER_RUN > 0 and total_items_processed >= MAX_ITEMS_PER_RUN:
-            series_skipped = len(series) - series_processed
+            series_skipped = len(series) - series_processed - series_skipped_unchanged
             items_limit_reached = True
             logger.warning(f"⚠️ Item processing limit reached ({MAX_ITEMS_PER_RUN}). Skipping remaining {series_skipped} series episode(s)")
             break
         
-        folder_name = parse_series_name(tvg_name)
-        season, episode = extract_season_episode(tvg_name)
+        # Process the item (new or changed)
         filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
         processed_series_files.add(filepath)
         total_items_processed += 1
@@ -510,7 +550,7 @@ def process_playlist():
             # For updated files, refresh the specific item immediately
             notify_emby_updated(filepath)
     
-    series_skipped = len(series) - series_processed
+    series_skipped = len(series) - series_processed - series_skipped_unchanged
     if series_added > 0 or series_updated > 0:
         logger.info(f"Series: {series_added} added, {series_updated} updated")
     if series_skipped > 0:
