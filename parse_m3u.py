@@ -27,6 +27,12 @@ LIVETV_DIR = Path("/usr/src/app/livetv")
 REMOVE_FILES = os.environ.get("REMOVE_FILES", "false").lower() == "true"
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "0"))
 
+# Path mapping for Emby (container path -> host path)
+# If not set, assumes container paths match host paths
+EMBY_MOVIES_PATH = os.environ.get("EMBY_MOVIES_PATH")
+EMBY_SERIES_PATH = os.environ.get("EMBY_SERIES_PATH")
+EMBY_LIVETV_PATH = os.environ.get("EMBY_LIVETV_PATH")
+
 # Temporary M3U file
 TMP_PLAYLIST = Path("/tmp/playlist.m3u")
 
@@ -97,6 +103,32 @@ def write_strm_file(directory: Path, filename: str, url: str) -> Tuple[Path, boo
         logger.debug(f"Updated STRM file (URL changed): {filepath}")
     return filepath, is_new or url_changed
 
+def convert_to_emby_path(file_path: Path) -> str:
+    """
+    Convert container path to the path that Emby sees on the host.
+    Uses path mapping environment variables if set.
+    """
+    path_str = str(file_path)
+    
+    # Map container paths to host paths if environment variables are set
+    if EMBY_MOVIES_PATH and path_str.startswith(str(MOVIES_DIR)):
+        # Replace container movies path with host path
+        relative_path = path_str[len(str(MOVIES_DIR)):].lstrip('/')
+        return str(Path(EMBY_MOVIES_PATH) / relative_path) if relative_path else EMBY_MOVIES_PATH
+    
+    if EMBY_SERIES_PATH and path_str.startswith(str(SERIES_DIR)):
+        # Replace container series path with host path
+        relative_path = path_str[len(str(SERIES_DIR)):].lstrip('/')
+        return str(Path(EMBY_SERIES_PATH) / relative_path) if relative_path else EMBY_SERIES_PATH
+    
+    if EMBY_LIVETV_PATH and path_str.startswith(str(LIVETV_DIR)):
+        # Replace container livetv path with host path
+        relative_path = path_str[len(str(LIVETV_DIR)):].lstrip('/')
+        return str(Path(EMBY_LIVETV_PATH) / relative_path) if relative_path else EMBY_LIVETV_PATH
+    
+    # If no mapping is set, return original path (assumes paths match)
+    return path_str
+
 def get_emby_item_by_path(file_path: Path) -> Optional[str]:
     """
     Find an Emby item ID by file path.
@@ -106,8 +138,9 @@ def get_emby_item_by_path(file_path: Path) -> Optional[str]:
         return None
     
     try:
-        # Convert to string path for Emby API
-        path_str = str(file_path)
+        # Convert container path to Emby host path
+        path_str = convert_to_emby_path(file_path)
+        logger.debug(f"Looking up Emby item for path: {path_str} (container: {file_path})")
         
         # Query Emby for items at this path
         url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Items"
@@ -169,9 +202,12 @@ def refresh_emby_library_path(path: Path):
         return False
     
     try:
+        # Convert container path to Emby host path
+        emby_path = convert_to_emby_path(path)
+        logger.debug(f"Refreshing Emby library path: {emby_path} (container: {path})")
         url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Library/Refresh"
         params = {
-            "Path": str(path),
+            "Path": emby_path,
             "Recursive": "true"
         }
         headers = {
