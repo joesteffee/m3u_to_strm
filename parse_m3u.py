@@ -291,28 +291,26 @@ def process_playlist():
             logger.debug(f"Skipping item without tvg-name: {info[:100]}...")
             continue
 
-        # Extract group-title for classification
+        # Extract group-title for classification (for logging/debugging)
         group_match = re.search(r'group-title="([^"]+)"', info)
         group_title = group_match.group(1).strip().lower() if group_match else ""
         
-        # Check URL patterns and group-title to classify content
+        # URL pattern is the most reliable indicator
+        # Movies: /movie/ in URL path
+        # Series: /series/ in URL path
+        # Live TV: neither pattern (just username/password/number)
         url_lower = url.lower()
         is_series = False
         is_movie = False
         
-        # Check group-title first (more reliable)
-        if group_title:
-            if "series" in group_title or "tv show" in group_title or "show" in group_title:
-                is_series = True
-            elif "movie" in group_title or "film" in group_title:
-                is_movie = True
-        
-        # Check URL patterns as fallback
-        if not is_series and not is_movie:
-            if "/series/" in url_lower or "series" in url_lower:
-                is_series = True
-            elif "/movie/" in url_lower or "movie" in url_lower:
-                is_movie = True
+        # Check URL patterns first (most reliable)
+        # Look for /movie/ or /series/ as path segments
+        if "/movie/" in url_lower:
+            is_movie = True
+        elif "/series/" in url_lower:
+            is_series = True
+        # If URL doesn't have /movie/ or /series/, it's live TV
+        # (regardless of group-title)
         
         if is_series:
             series.append((tvg_name, url))

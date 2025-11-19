@@ -403,6 +403,31 @@ http://example.com/live/12345
         content = live_file.read_text()
         assert "Live Channel" in content
         assert "http://example.com/live/12345" in content
+    
+    def test_process_playlist_live_tv_url_pattern(self):
+        """Test that URLs without /movie/ or /series/ go to live TV even with Movies group-title"""
+        from parse_m3u import process_playlist
+        
+        # This simulates a live TV channel with URL like: http://x.jbnott.xyz:80/e55a38c80b/aa52c80b0020/1917227
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="Movie Channel" tvg-id="" tvg-logo="" group-title="Movies",Movie Channel
+http://example.com/e55a38c80b/aa52c80b0020/1917227
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        with patch('parse_m3u.notify_emby'):
+            process_playlist()
+        
+        # Should NOT create a movie STRM file
+        movie_files = list(self.movies_dir.rglob("*.strm"))
+        assert len(movie_files) == 0, "Live TV URL should not create movie STRM files"
+        
+        # Should create live TV entry
+        live_file = self.livetv_dir / "livetv.m3u"
+        assert live_file.exists()
+        content = live_file.read_text()
+        assert "Movie Channel" in content
+        assert "1917227" in content
 
 
 if __name__ == "__main__":
