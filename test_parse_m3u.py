@@ -392,32 +392,36 @@ class TestPlaylistProcessing:
         self.movies_dir = self.temp_dir / "movies"
         self.series_dir = self.temp_dir / "series"
         self.livetv_dir = self.temp_dir / "livetv"
+        self.tmp_playlist = self.temp_dir / "playlist.m3u"
         
-        # Patch the directory paths
+        # Patch the directory paths and temporary playlist
         self.movies_patcher = patch('parse_m3u.MOVIES_DIR', self.movies_dir)
         self.series_patcher = patch('parse_m3u.SERIES_DIR', self.series_dir)
         self.livetv_patcher = patch('parse_m3u.LIVETV_DIR', self.livetv_dir)
+        self.tmp_playlist_patcher = patch('parse_m3u.TMP_PLAYLIST', self.tmp_playlist)
         self.movies_patcher.start()
         self.series_patcher.start()
         self.livetv_patcher.start()
+        self.tmp_playlist_patcher.start()
     
     def teardown_method(self):
         """Clean up"""
         self.movies_patcher.stop()
         self.series_patcher.stop()
         self.livetv_patcher.stop()
+        self.tmp_playlist_patcher.stop()
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
     
     def test_process_playlist_movies(self):
         """Test processing movies from playlist"""
-        from parse_m3u import process_playlist, TMP_PLAYLIST
+        from parse_m3u import process_playlist
         
         playlist_content = """#EXTM3U
 #EXTINF:-1 tvg-name="EN - Test Movie (2023)" tvg-id="" tvg-logo="" group-title="Movies",Test Movie (2023)
 http://example.com/movie/12345
 """
-        TMP_PLAYLIST.write_text(playlist_content)
+        self.tmp_playlist.write_text(playlist_content)
         
         with patch('parse_m3u.notify_emby'):
             process_playlist()
@@ -429,13 +433,13 @@ http://example.com/movie/12345
     
     def test_process_playlist_series(self):
         """Test processing series from playlist"""
-        from parse_m3u import process_playlist, TMP_PLAYLIST
+        from parse_m3u import process_playlist
         
         playlist_content = """#EXTM3U
 #EXTINF:-1 tvg-name="EN - Test Series (2023) S01E01" tvg-id="" tvg-logo="" group-title="Series",Test Series (2023) S01E01
 http://example.com/series/12345
 """
-        TMP_PLAYLIST.write_text(playlist_content)
+        self.tmp_playlist.write_text(playlist_content)
         
         with patch('parse_m3u.notify_emby'):
             process_playlist()
@@ -447,13 +451,13 @@ http://example.com/series/12345
     
     def test_process_playlist_live_tv(self):
         """Test processing live TV from playlist"""
-        from parse_m3u import process_playlist, TMP_PLAYLIST
+        from parse_m3u import process_playlist
         
         playlist_content = """#EXTM3U
 #EXTINF:-1 tvg-name="Live Channel" tvg-id="" tvg-logo="" group-title="Live TV",Live Channel
 http://example.com/live/12345
 """
-        TMP_PLAYLIST.write_text(playlist_content)
+        self.tmp_playlist.write_text(playlist_content)
         
         with patch('parse_m3u.notify_emby'):
             process_playlist()
