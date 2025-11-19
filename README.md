@@ -9,8 +9,10 @@ A Python script that downloads M3U playlists and converts them into `.strm` file
   - **Movies**: Individual `.strm` files in movie-named folders
   - **Series**: Organized by show name, season, and episode
   - **Live TV**: Combined into a single `livetv.m3u` file
+- **Emby Integration**: Automatically notifies Emby when STRM files are added or updated, refreshing only specific library items (no full library scans)
 - Supports automatic cleanup of empty directories
 - Configurable interval for periodic updates
+- Comprehensive logging to stdout with timestamps
 - Dockerized for easy deployment
 
 ## Requirements
@@ -23,8 +25,11 @@ A Python script that downloads M3U playlists and converts them into `.strm` file
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `M3U_URL` | URL to the M3U playlist file | Yes |
-| `EMBY_SERVER_URL` | Emby server URL (for future use) | No |
-| `EMBY_API_KEY` | Emby API key (for future use) | No |
+| `EMBY_SERVER_URL` | Emby server URL (e.g., `http://emby:8096`) | No |
+| `EMBY_API_KEY` | Emby API key for library refresh notifications | No |
+| `EMBY_MOVIES_PATH` | Host path that Emby sees for movies (if different from container path) | No |
+| `EMBY_SERIES_PATH` | Host path that Emby sees for series (if different from container path) | No |
+| `EMBY_LIVETV_PATH` | Host path that Emby sees for live TV (if different from container path) | No |
 | `REMOVE_FILES` | Set to "true" to remove empty directories | No (default: false) |
 | `INTERVAL_SECONDS` | Seconds between playlist updates (0 = run once) | No (default: 0) |
 
@@ -58,6 +63,11 @@ The script creates the following directory structure:
    ```bash
    docker run -d \
      -e M3U_URL="https://example.com/playlist.m3u" \
+     -e EMBY_SERVER_URL="http://emby:8096" \
+     -e EMBY_API_KEY="your-api-key-here" \
+     -e EMBY_MOVIES_PATH="/mnt/media/movies" \
+     -e EMBY_SERIES_PATH="/mnt/media/series" \
+     -e EMBY_LIVETV_PATH="/mnt/media/livetv" \
      -e REMOVE_FILES="true" \
      -e INTERVAL_SECONDS=3600 \
      -v /path/to/movies:/usr/src/app/movies \
@@ -65,6 +75,8 @@ The script creates the following directory structure:
      -v /path/to/livetv:/usr/src/app/livetv \
      m3u_to_strm:latest
    ```
+
+   **Note**: The `EMBY_*_PATH` variables are only needed if the paths Emby sees on the host differ from the container paths. If your Docker volumes mount to the same paths that Emby uses, you can omit these variables.
 
 ### Local Python
 
@@ -89,7 +101,11 @@ The script creates the following directory structure:
 3. For movies: Creates a folder named after the movie and a `.strm` file inside
 4. For series: Organizes by show name, season, and episode number
 5. For live TV: Combines all live TV streams into a single M3U file
-6. Optionally removes empty directories if `REMOVE_FILES=true`
+6. **Emby Integration**: When Emby credentials are provided:
+   - For new items: Triggers a library refresh for the parent directory (adds the item)
+   - For updated items: Finds the item by path and refreshes it directly (updates metadata)
+   - Uses path mapping to convert container paths to host paths that Emby recognizes
+7. Optionally removes empty directories if `REMOVE_FILES=true`
 
 ## Notes
 
