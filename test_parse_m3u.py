@@ -169,84 +169,35 @@ class TestFileOperations:
 class TestPathConversion:
     """Test path conversion for Emby"""
     
-    def setup_method(self):
-        """Set up environment variables"""
-        self.original_movies = os.environ.get("EMBY_MOVIES_PATH")
-        self.original_series = os.environ.get("EMBY_SERIES_PATH")
-        self.original_livetv = os.environ.get("EMBY_LIVETV_PATH")
-    
-    def teardown_method(self):
-        """Restore environment variables"""
-        if self.original_movies:
-            os.environ["EMBY_MOVIES_PATH"] = self.original_movies
-        elif "EMBY_MOVIES_PATH" in os.environ:
-            del os.environ["EMBY_MOVIES_PATH"]
-        
-        if self.original_series:
-            os.environ["EMBY_SERIES_PATH"] = self.original_series
-        elif "EMBY_SERIES_PATH" in os.environ:
-            del os.environ["EMBY_SERIES_PATH"]
-        
-        if self.original_livetv:
-            os.environ["EMBY_LIVETV_PATH"] = self.original_livetv
-        elif "EMBY_LIVETV_PATH" in os.environ:
-            del os.environ["EMBY_LIVETV_PATH"]
-        
-        # Reload module to pick up new env vars
-        if 'parse_m3u' in sys.modules:
-            import importlib
-            importlib.reload(sys.modules['parse_m3u'])
-    
     def test_convert_to_emby_path_no_mapping(self):
         """Test path conversion when no mapping is set"""
-        # Clear any existing mappings
-        if "EMBY_MOVIES_PATH" in os.environ:
-            del os.environ["EMBY_MOVIES_PATH"]
-        if "EMBY_SERIES_PATH" in os.environ:
-            del os.environ["EMBY_SERIES_PATH"]
-        if "EMBY_LIVETV_PATH" in os.environ:
-            del os.environ["EMBY_LIVETV_PATH"]
-        
-        # Reload module
-        if 'parse_m3u' in sys.modules:
-            import importlib
-            importlib.reload(sys.modules['parse_m3u'])
-        
-        from parse_m3u import convert_to_emby_path, MOVIES_DIR
-        
-        path = MOVIES_DIR / "Movie Name" / "Movie Name.strm"
-        result = convert_to_emby_path(path)
-        assert result == str(path)
+        # Patch constants to None (no mapping)
+        with patch('parse_m3u.EMBY_MOVIES_PATH', None), \
+             patch('parse_m3u.EMBY_SERIES_PATH', None), \
+             patch('parse_m3u.EMBY_LIVETV_PATH', None):
+            
+            from parse_m3u import convert_to_emby_path, MOVIES_DIR
+            path = MOVIES_DIR / "Movie Name" / "Movie Name.strm"
+            result = convert_to_emby_path(path)
+            assert result == str(path)
     
     def test_convert_to_emby_path_movies_mapping(self):
         """Test path conversion with movies path mapping"""
-        os.environ["EMBY_MOVIES_PATH"] = "/mnt/media/movies"
-        
-        # Reload module
-        if 'parse_m3u' in sys.modules:
-            import importlib
-            importlib.reload(sys.modules['parse_m3u'])
-        
-        from parse_m3u import convert_to_emby_path, MOVIES_DIR
-        
-        path = MOVIES_DIR / "Movie Name" / "Movie Name.strm"
-        result = convert_to_emby_path(path)
-        assert result == "/mnt/media/movies/Movie Name/Movie Name.strm"
+        # Patch constant to use mapping
+        with patch('parse_m3u.EMBY_MOVIES_PATH', "/mnt/media/movies"):
+            from parse_m3u import convert_to_emby_path, MOVIES_DIR
+            path = MOVIES_DIR / "Movie Name" / "Movie Name.strm"
+            result = convert_to_emby_path(path)
+            assert result == "/mnt/media/movies/Movie Name/Movie Name.strm"
     
     def test_convert_to_emby_path_series_mapping(self):
         """Test path conversion with series path mapping"""
-        os.environ["EMBY_SERIES_PATH"] = "/mnt/media/series"
-        
-        # Reload module
-        if 'parse_m3u' in sys.modules:
-            import importlib
-            importlib.reload(sys.modules['parse_m3u'])
-        
-        from parse_m3u import convert_to_emby_path, SERIES_DIR
-        
-        path = SERIES_DIR / "Series Name" / "Season 1" / "S01E01.strm"
-        result = convert_to_emby_path(path)
-        assert result == "/mnt/media/series/Series Name/Season 1/S01E01.strm"
+        # Patch constant to use mapping
+        with patch('parse_m3u.EMBY_SERIES_PATH', "/mnt/media/series"):
+            from parse_m3u import convert_to_emby_path, SERIES_DIR
+            path = SERIES_DIR / "Series Name" / "Season 1" / "S01E01.strm"
+            result = convert_to_emby_path(path)
+            assert result == "/mnt/media/series/Series Name/Season 1/S01E01.strm"
 
 
 class TestEmbyIntegration:
@@ -254,32 +205,16 @@ class TestEmbyIntegration:
     
     def setup_method(self):
         """Set up test environment"""
-        self.original_url = os.environ.get("EMBY_SERVER_URL")
-        self.original_key = os.environ.get("EMBY_API_KEY")
-        os.environ["EMBY_SERVER_URL"] = "http://emby:8096"
-        os.environ["EMBY_API_KEY"] = "test-api-key"
-        
-        # Reload module
-        if 'parse_m3u' in sys.modules:
-            import importlib
-            importlib.reload(sys.modules['parse_m3u'])
+        # Patch constants directly instead of using environment variables
+        self.emby_url_patcher = patch('parse_m3u.EMBY_SERVER_URL', "http://emby:8096")
+        self.emby_key_patcher = patch('parse_m3u.EMBY_API_KEY', "test-api-key")
+        self.emby_url_patcher.start()
+        self.emby_key_patcher.start()
     
     def teardown_method(self):
         """Restore environment"""
-        if self.original_url:
-            os.environ["EMBY_SERVER_URL"] = self.original_url
-        elif "EMBY_SERVER_URL" in os.environ:
-            del os.environ["EMBY_SERVER_URL"]
-        
-        if self.original_key:
-            os.environ["EMBY_API_KEY"] = self.original_key
-        elif "EMBY_API_KEY" in os.environ:
-            del os.environ["EMBY_API_KEY"]
-        
-        # Reload module
-        if 'parse_m3u' in sys.modules:
-            import importlib
-            importlib.reload(sys.modules['parse_m3u'])
+        self.emby_url_patcher.stop()
+        self.emby_key_patcher.stop()
     
     def test_get_emby_item_by_path_success(self, requests_mock):
         """Test successful item lookup by path"""
