@@ -78,10 +78,10 @@ def extract_season_episode(tvg_name: str):
         return season, episode
     return "Season 1", "S01E01"
 
-def write_strm_file(directory: Path, filename: str, url: str) -> Tuple[Path, bool]:
+def write_strm_file(directory: Path, filename: str, url: str) -> Tuple[Path, bool, bool]:
     """
-    Write a STRM file and return the filepath and whether it was newly created.
-    Returns: (filepath, is_new)
+    Write a STRM file and return the filepath, whether it was newly created, and if URL changed.
+    Returns: (filepath, is_new, url_changed)
     """
     directory.mkdir(parents=True, exist_ok=True)
     filepath = directory / f"{filename}.strm"
@@ -101,7 +101,7 @@ def write_strm_file(directory: Path, filename: str, url: str) -> Tuple[Path, boo
         logger.debug(f"Created new STRM file: {filepath}")
     elif url_changed:
         logger.debug(f"Updated STRM file (URL changed): {filepath}")
-    return filepath, is_new or url_changed
+    return filepath, is_new, url_changed
 
 def convert_to_emby_path(file_path: Path) -> str:
     """
@@ -222,11 +222,11 @@ def refresh_emby_library_path(path: Path):
         logger.warning(f"⚠️ Error refreshing Emby library path {path}: {e}")
         return False
 
-def notify_emby(filepath: Path, is_new: bool):
+def notify_emby(filepath: Path, is_new: bool, url_changed: bool):
     """
     Notify Emby about a STRM file change.
     For new files: trigger library refresh for the parent directory
-    For updated files: find item and refresh it
+    For updated files: find item and refresh it directly (more efficient)
     """
     if not EMBY_SERVER_URL or not EMBY_API_KEY:
         logger.debug(f"Emby notification skipped (not configured) for {filepath}")
@@ -236,8 +236,9 @@ def notify_emby(filepath: Path, is_new: bool):
         # For new items, trigger library refresh for the parent directory
         # This will add the new item without a full library scan
         refresh_emby_library_path(filepath.parent)
-    else:
-        # For updated items, find the item and refresh it
+    elif url_changed:
+        # For updated items (URL changed), find the item and refresh it directly
+        # This avoids full library scans and only updates the specific item
         item_id = get_emby_item_by_path(filepath)
         if item_id:
             refresh_emby_item(item_id, "Update")
@@ -245,6 +246,7 @@ def notify_emby(filepath: Path, is_new: bool):
             # If item not found, try library refresh as fallback
             logger.warning(f"⚠️ Item not found in Emby for {filepath}, triggering library refresh")
             refresh_emby_library_path(filepath.parent)
+    # If neither is_new nor url_changed, no notification needed
 
 def cleanup_empty_dirs(base_dir: Path):
     for d in base_dir.iterdir():
@@ -287,16 +289,16 @@ def process_playlist():
     logger.info(f"Processing {len(movies)} movie(s)")
     for tvg_name, url in movies:
         folder_name = parse_movie_name(tvg_name)
-        filepath, is_new = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
-        notify_emby(filepath, is_new)
+        filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
+        notify_emby(filepath, is_new, url_changed)
 
     # Process series
     logger.info(f"Processing {len(series)} series episode(s)")
     for tvg_name, url in series:
         folder_name = parse_series_name(tvg_name)
         season, episode = extract_season_episode(tvg_name)
-        filepath, is_new = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
-        notify_emby(filepath, is_new)
+        filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
+        notify_emby(filepath, is_new, url_changed)
 
     # Process live TV
     if live_tv:
