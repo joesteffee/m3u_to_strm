@@ -45,15 +45,16 @@ def download_playlist():
     logger.info(f"✅ Saved to {TMP_PLAYLIST}")
 
 def safe_filename(name: str) -> str:
-    return re.sub(r'[\\/:"*?<>|]+', '', name).strip()
+    # Remove invalid filesystem characters including # which can cause issues
+    return re.sub(r'[\\/:"*?<>|#]+', '', name).strip()
 
 def parse_movie_name(tvg_name: str):
-    # Remove language prefix like "EN - "
-    tvg_name = re.sub(r'^[A-Z]{1,3}\s*-\s*', '', tvg_name).strip()
-    # Preserve year at end if present
-    year_match = re.search(r'\(\d{4}\)$', tvg_name)
+    # Remove language prefix like "EN - ", "NF - ", "D+ - ", etc.
+    tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
+    # Extract year (can be anywhere, but typically after title)
+    year_match = re.search(r'\((\d{4})\)', tvg_name)
     year = year_match.group(0) if year_match else ''
-    # Remove all parentheses content (including year if present)
+    # Remove all parentheses content (including year and other info)
     tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
     # Add year back if it was present
     if year:
@@ -61,16 +62,14 @@ def parse_movie_name(tvg_name: str):
     return safe_filename(tvg_name)
 
 def parse_series_name(tvg_name: str):
-    tvg_name = re.sub(r'^[A-Z]{1,3}\s*-\s*', '', tvg_name).strip()
-    # Extract year at end (before removing season/episode)
-    year_match = re.search(r'\(\d{4}\)\s*S\d{1,2}\s*E\d{1,2}', tvg_name) or re.search(r'\(\d{4}\)$', tvg_name)
+    # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", etc.
+    tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
+    # Extract year (can appear before or after season/episode)
+    year_match = re.search(r'\((\d{4})\)', tvg_name)
     year = year_match.group(0) if year_match else ''
-    if year and 'S' in year:
-        # Extract just the year part if it's followed by season/episode
-        year = re.search(r'\(\d{4}\)', year).group(0)
-    # Remove season/episode from name first
-    tvg_name = re.sub(r'\s+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name).strip()
-    # Remove all parentheses content (including year if present)
+    # Remove season/episode from name first (handles "S01 E02", "S01E02", ".S01E06", etc.)
+    tvg_name = re.sub(r'[.\s]+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name, flags=re.IGNORECASE).strip()
+    # Remove all parentheses content (including year, country codes like "(US)", etc.)
     tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
     # Add year back if it was present
     if year:
@@ -78,10 +77,13 @@ def parse_series_name(tvg_name: str):
     return safe_filename(tvg_name)
 
 def extract_season_episode(tvg_name: str):
+    # Match "S01E02", "S01 E02", "S1E2", etc. (case insensitive)
     match = re.search(r'S(\d{1,2})\s*E(\d{1,2})', tvg_name, re.IGNORECASE)
     if match:
-        season = f"Season {int(match.group(1))}"
-        episode = f"S{int(match.group(1)):02d}E{int(match.group(2)):02d}"
+        season_num = int(match.group(1))
+        episode_num = int(match.group(2))
+        season = f"Season {season_num}"
+        episode = f"S{season_num:02d}E{episode_num:02d}"
         return season, episode
     return "Season 1", "S01E01"
 
