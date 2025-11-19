@@ -530,6 +530,64 @@ http://example.com/username/password/1917227
         assert not orphaned_file.exists()
         # Verify only GET was called (to find item), no DELETE
         assert requests_mock.call_count == 1
+    
+    def test_process_playlist_empty_skips_orphan_cleanup(self, caplog):
+        """Test that empty playlist skips orphan cleanup to prevent mass deletion"""
+        from parse_m3u import process_playlist, cleanup_orphaned_files
+        
+        # Create an existing STRM file that should NOT be deleted
+        existing_file = self.movies_dir / "Existing Movie" / "Existing Movie.strm"
+        existing_file.parent.mkdir(parents=True, exist_ok=True)
+        existing_file.write_text("http://example.com/existing")
+        
+        # Create an empty playlist (no valid entries)
+        playlist_content = """#EXTM3U
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        # Mock cleanup_orphaned_files to verify it's NOT called
+        with patch('parse_m3u.cleanup_orphaned_files') as mock_cleanup:
+            process_playlist()
+        
+        # Verify cleanup_orphaned_files was NOT called (empty playlist protection)
+        mock_cleanup.assert_not_called()
+        
+        # Verify existing file was NOT deleted
+        assert existing_file.exists()
+        
+        # Verify warning was logged
+        assert "Playlist contains no valid items" in caplog.text
+        assert "Skipping orphan cleanup" in caplog.text
+    
+    def test_process_playlist_only_invalid_entries_skips_orphan_cleanup(self, caplog):
+        """Test that playlist with only invalid entries (no tvg-name) skips orphan cleanup"""
+        from parse_m3u import process_playlist
+        
+        # Create an existing STRM file that should NOT be deleted
+        existing_file = self.movies_dir / "Existing Movie" / "Existing Movie.strm"
+        existing_file.parent.mkdir(parents=True, exist_ok=True)
+        existing_file.write_text("http://example.com/existing")
+        
+        # Create a playlist with entries but no tvg-name (all invalid)
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-id="" tvg-logo="" group-title="Movies",Movie Without Name
+http://example.com/movie/12345
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        # Mock cleanup_orphaned_files to verify it's NOT called
+        with patch('parse_m3u.cleanup_orphaned_files') as mock_cleanup:
+            process_playlist()
+        
+        # Verify cleanup_orphaned_files was NOT called (no valid items protection)
+        mock_cleanup.assert_not_called()
+        
+        # Verify existing file was NOT deleted
+        assert existing_file.exists()
+        
+        # Verify warning was logged
+        assert "Playlist contains no valid items" in caplog.text
+        assert "Skipping orphan cleanup" in caplog.text
 
 
 if __name__ == "__main__":

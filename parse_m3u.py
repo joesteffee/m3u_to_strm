@@ -407,6 +407,15 @@ def process_playlist():
         logger.warning(f"Skipped {no_tvg_name_count} entries without tvg-name")
     logger.info(f"Classified: {len(movies)} movies, {len(series)} series, {len(live_tv)} live TV")
 
+    # Safety check: If playlist is empty or has no valid entries, skip orphan cleanup
+    # This prevents mass deletion when download fails or playlist is invalid
+    total_valid_items = len(movies) + len(series) + len(live_tv)
+    if total_valid_items == 0:
+        logger.warning("⚠️ Playlist contains no valid items (0 movies, 0 series, 0 live TV)")
+        logger.warning("⚠️ Skipping orphan cleanup to prevent accidental mass deletion")
+        logger.warning("⚠️ This may indicate a download failure or invalid playlist file")
+        return
+
     # Track all processed files for orphan cleanup
     processed_movie_files = set()
     processed_series_files = set()
