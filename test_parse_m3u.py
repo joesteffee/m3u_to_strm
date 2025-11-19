@@ -408,10 +408,10 @@ http://example.com/live/12345
         """Test that URLs without /movie/ or /series/ go to live TV even with Movies group-title"""
         from parse_m3u import process_playlist
         
-        # This simulates a live TV channel with URL like: http://x.jbnott.xyz:80/e55a38c80b/aa52c80b0020/1917227
+        # This simulates a live TV channel with URL like: http://example.com/username/password/channel_id
         playlist_content = """#EXTM3U
 #EXTINF:-1 tvg-name="Movie Channel" tvg-id="" tvg-logo="" group-title="Movies",Movie Channel
-http://example.com/e55a38c80b/aa52c80b0020/1917227
+http://example.com/username/password/1917227
 """
         self.tmp_playlist.write_text(playlist_content)
         
