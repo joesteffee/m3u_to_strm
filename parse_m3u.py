@@ -27,6 +27,8 @@ LIVETV_DIR = Path("/usr/src/app/livetv")
 REMOVE_FILES = os.environ.get("REMOVE_FILES", "false").lower() == "true"
 REMOVE_ORPHANED = os.environ.get("REMOVE_ORPHANED", "false").lower() == "true"
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "0"))
+# Limit number of items (movies + series) to process per run (0 = no limit)
+MAX_ITEMS_PER_RUN = int(os.environ.get("MAX_ITEMS_PER_RUN", "0"))
 
 # Path mapping for Emby (container path -> host path)
 # If not set, assumes container paths match host paths
@@ -423,15 +425,33 @@ def process_playlist():
     # Track directories with new files for batch refresh
     new_movie_directories = set()
     new_series_directories = set()
+    
+    # Track total items processed (for limit)
+    total_items_processed = 0
+    items_limit_reached = False
 
     # Process movies
     logger.info(f"Processing {len(movies)} movie(s)")
+    if MAX_ITEMS_PER_RUN > 0:
+        logger.info(f"Item processing limit: {MAX_ITEMS_PER_RUN} (movies + series, excluding Live TV)")
+    
     movies_added = 0
     movies_updated = 0
+    movies_processed = 0
     for tvg_name, url in movies:
+        # Check if limit reached
+        if MAX_ITEMS_PER_RUN > 0 and total_items_processed >= MAX_ITEMS_PER_RUN:
+            movies_skipped = len(movies) - movies_processed
+            items_limit_reached = True
+            logger.warning(f"⚠️ Item processing limit reached ({MAX_ITEMS_PER_RUN}). Skipping remaining {movies_skipped} movie(s)")
+            break
+        
         folder_name = parse_movie_name(tvg_name)
         filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
         processed_movie_files.add(filepath)
+        total_items_processed += 1
+        movies_processed += 1
+        
         if is_new:
             movies_added += 1
             # Track directory for batch refresh (only if new)
@@ -441,8 +461,11 @@ def process_playlist():
             # For updated files, refresh the specific item immediately
             notify_emby_updated(filepath)
     
+    movies_skipped = len(movies) - movies_processed
     if movies_added > 0 or movies_updated > 0:
         logger.info(f"Movies: {movies_added} added, {movies_updated} updated")
+    if movies_skipped > 0:
+        logger.info(f"Movies: {movies_skipped} skipped due to processing limit")
     
     # Batch refresh directories with new movie files
     if new_movie_directories:
@@ -452,11 +475,22 @@ def process_playlist():
     logger.info(f"Processing {len(series)} series episode(s)")
     series_added = 0
     series_updated = 0
+    series_processed = 0
     for tvg_name, url in series:
+        # Check if limit reached
+        if MAX_ITEMS_PER_RUN > 0 and total_items_processed >= MAX_ITEMS_PER_RUN:
+            series_skipped = len(series) - series_processed
+            items_limit_reached = True
+            logger.warning(f"⚠️ Item processing limit reached ({MAX_ITEMS_PER_RUN}). Skipping remaining {series_skipped} series episode(s)")
+            break
+        
         folder_name = parse_series_name(tvg_name)
         season, episode = extract_season_episode(tvg_name)
         filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
         processed_series_files.add(filepath)
+        total_items_processed += 1
+        series_processed += 1
+        
         if is_new:
             series_added += 1
             # Track directory for batch refresh (only if new)
@@ -466,12 +500,18 @@ def process_playlist():
             # For updated files, refresh the specific item immediately
             notify_emby_updated(filepath)
     
+    series_skipped = len(series) - series_processed
     if series_added > 0 or series_updated > 0:
         logger.info(f"Series: {series_added} added, {series_updated} updated")
+    if series_skipped > 0:
+        logger.info(f"Series: {series_skipped} skipped due to processing limit")
     
     # Batch refresh directories with new series files
     if new_series_directories:
         batch_refresh_directories(new_series_directories)
+    
+    if items_limit_reached:
+        logger.info(f"ℹ️ Processed {total_items_processed} items (limit: {MAX_ITEMS_PER_RUN}). Remaining items will be processed on next run.")
 
     # Process live TV
     if live_tv:

@@ -33,6 +33,7 @@ A Python script that downloads M3U playlists and converts them into `.strm` file
 | `REMOVE_FILES` | Set to "true" to remove empty directories | No (default: false) |
 | `REMOVE_ORPHANED` | Set to "true" to remove STRM files that no longer exist in the M3U playlist | No (default: false) |
 | `INTERVAL_SECONDS` | Seconds between playlist updates (0 = run once) | No (default: 0) |
+| `MAX_ITEMS_PER_RUN` | Maximum number of items (movies + series) to process per run. Live TV is not included in this limit. Set to 0 for no limit | No (default: 0) |
 
 ## Directory Structure
 
