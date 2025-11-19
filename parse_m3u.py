@@ -52,20 +52,26 @@ def parse_movie_name(tvg_name: str):
     # Preserve year at end if present
     year_match = re.search(r'\(\d{4}\)$', tvg_name)
     year = year_match.group(0) if year_match else ''
-    # Remove any other parentheses content
-    tvg_name = re.sub(r'\s*\([^()]*\)(?!$)', '', tvg_name).strip()
+    # Remove all parentheses content (including year if present)
+    tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
+    # Add year back if it was present
     if year:
         tvg_name += f" {year}"
     return safe_filename(tvg_name)
 
 def parse_series_name(tvg_name: str):
     tvg_name = re.sub(r'^[A-Z]{1,3}\s*-\s*', '', tvg_name).strip()
-    # Extract year at end
-    year_match = re.search(r'\(\d{4}\)$', tvg_name)
+    # Extract year at end (before removing season/episode)
+    year_match = re.search(r'\(\d{4}\)\s*S\d{1,2}\s*E\d{1,2}', tvg_name) or re.search(r'\(\d{4}\)$', tvg_name)
     year = year_match.group(0) if year_match else ''
-    tvg_name = re.sub(r'\s*\([^()]*\)(?!$)', '', tvg_name).strip()
-    # Remove season/episode from name
+    if year and 'S' in year:
+        # Extract just the year part if it's followed by season/episode
+        year = re.search(r'\(\d{4}\)', year).group(0)
+    # Remove season/episode from name first
     tvg_name = re.sub(r'\s+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name).strip()
+    # Remove all parentheses content (including year if present)
+    tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
+    # Add year back if it was present
     if year:
         tvg_name += f" {year}"
     return safe_filename(tvg_name)
@@ -262,11 +268,16 @@ def process_playlist():
     live_tv = []
 
     lines = TMP_PLAYLIST.read_text(encoding="utf-8").splitlines()
+    logger.debug(f"Playlist has {len(lines)} total lines")
+    
+    extinf_count = 0
+    no_tvg_name_count = 0
     i = 0
     while i < len(lines):
         if not lines[i].startswith("#EXTINF"):
             i += 1
             continue
+        extinf_count += 1
         info = lines[i]
         url = lines[i+1] if i+1 < len(lines) else ""
         i += 2
@@ -276,14 +287,46 @@ def process_playlist():
 
         if not tvg_name:
             # Skip items without tvg-name
+            no_tvg_name_count += 1
+            logger.debug(f"Skipping item without tvg-name: {info[:100]}...")
             continue
 
-        if "/series/" in url:
+        # Extract group-title for classification
+        group_match = re.search(r'group-title="([^"]+)"', info)
+        group_title = group_match.group(1).strip().lower() if group_match else ""
+        
+        # Check URL patterns and group-title to classify content
+        url_lower = url.lower()
+        is_series = False
+        is_movie = False
+        
+        # Check group-title first (more reliable)
+        if group_title:
+            if "series" in group_title or "tv show" in group_title or "show" in group_title:
+                is_series = True
+            elif "movie" in group_title or "film" in group_title:
+                is_movie = True
+        
+        # Check URL patterns as fallback
+        if not is_series and not is_movie:
+            if "/series/" in url_lower or "series" in url_lower:
+                is_series = True
+            elif "/movie/" in url_lower or "movie" in url_lower:
+                is_movie = True
+        
+        if is_series:
             series.append((tvg_name, url))
-        elif "/movie/" in url:
+            logger.debug(f"Found series: {tvg_name} (group: {group_title})")
+        elif is_movie:
             movies.append((tvg_name, url))
+            logger.debug(f"Found movie: {tvg_name} (group: {group_title})")
         else:
             live_tv.append(info + "\n" + url)
+    
+    logger.info(f"Found {extinf_count} #EXTINF entries")
+    if no_tvg_name_count > 0:
+        logger.warning(f"Skipped {no_tvg_name_count} entries without tvg-name")
+    logger.info(f"Classified: {len(movies)} movies, {len(series)} series, {len(live_tv)} live TV")
 
     # Process movies
     logger.info(f"Processing {len(movies)} movie(s)")
