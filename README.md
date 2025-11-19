@@ -31,6 +31,7 @@ A Python script that downloads M3U playlists and converts them into `.strm` file
 | `EMBY_SERIES_PATH` | Host path that Emby sees for series (if different from container path) | No |
 | `EMBY_LIVETV_PATH` | Host path that Emby sees for live TV (if different from container path) | No |
 | `REMOVE_FILES` | Set to "true" to remove empty directories | No (default: false) |
+| `REMOVE_ORPHANED` | Set to "true" to remove STRM files that no longer exist in the M3U playlist | No (default: false) |
 | `INTERVAL_SECONDS` | Seconds between playlist updates (0 = run once) | No (default: 0) |
 
 ## Directory Structure
@@ -105,7 +106,8 @@ The script creates the following directory structure:
    - For new items: Triggers a library refresh for the parent directory (adds the item)
    - For updated items: Finds the item by path and refreshes it directly (updates metadata)
    - Uses path mapping to convert container paths to host paths that Emby recognizes
-7. Optionally removes empty directories if `REMOVE_FILES=true`
+7. **Orphan Cleanup**: If `REMOVE_ORPHANED=true`, removes STRM files that no longer exist in the source M3U playlist
+8. Optionally removes empty directories if `REMOVE_FILES=true`
 
 ## Notes
 
