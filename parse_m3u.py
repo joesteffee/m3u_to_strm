@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 import os
 import re
+import sys
 import time
+import logging
 import requests
 from pathlib import Path
+from typing import Tuple, Optional
+
+# Configure logging to stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
 
 # Environment variables
 EMBY_SERVER_URL = os.environ.get("EMBY_SERVER_URL")
@@ -19,11 +31,11 @@ INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "0"))
 TMP_PLAYLIST = Path("/tmp/playlist.m3u")
 
 def download_playlist():
-    print(f"⬇️ Downloading playlist from {M3U_URL}")
+    logger.info(f"⬇️ Downloading playlist from {M3U_URL}")
     resp = requests.get(M3U_URL)
     resp.raise_for_status()
     TMP_PLAYLIST.write_text(resp.text, encoding="utf-8")
-    print(f"✅ Saved to {TMP_PLAYLIST}")
+    logger.info(f"✅ Saved to {TMP_PLAYLIST}")
 
 def safe_filename(name: str) -> str:
     return re.sub(r'[\\/:"*?<>|]+', '', name).strip()
@@ -60,15 +72,148 @@ def extract_season_episode(tvg_name: str):
         return season, episode
     return "Season 1", "S01E01"
 
-def write_strm_file(directory: Path, filename: str, url: str):
+def write_strm_file(directory: Path, filename: str, url: str) -> Tuple[Path, bool]:
+    """
+    Write a STRM file and return the filepath and whether it was newly created.
+    Returns: (filepath, is_new)
+    """
     directory.mkdir(parents=True, exist_ok=True)
     filepath = directory / f"{filename}.strm"
+    is_new = not filepath.exists()
+    
+    # Read existing content to check if URL changed
+    url_changed = False
+    if not is_new:
+        try:
+            existing_url = filepath.read_text(encoding="utf-8").strip()
+            url_changed = existing_url != url
+        except Exception:
+            url_changed = True
+    
     filepath.write_text(url, encoding="utf-8")
+    if is_new:
+        logger.debug(f"Created new STRM file: {filepath}")
+    elif url_changed:
+        logger.debug(f"Updated STRM file (URL changed): {filepath}")
+    return filepath, is_new or url_changed
+
+def get_emby_item_by_path(file_path: Path) -> Optional[str]:
+    """
+    Find an Emby item ID by file path.
+    Returns the item ID if found, None otherwise.
+    """
+    if not EMBY_SERVER_URL or not EMBY_API_KEY:
+        return None
+    
+    try:
+        # Convert to string path for Emby API
+        path_str = str(file_path)
+        
+        # Query Emby for items at this path
+        url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Items"
+        params = {
+            "Path": path_str,
+            "Recursive": "false"
+        }
+        headers = {
+            "X-Emby-Token": EMBY_API_KEY
+        }
+        
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        resp.raise_for_status()
+        
+        data = resp.json()
+        if "Items" in data and len(data["Items"]) > 0:
+            return data["Items"][0]["Id"]
+        
+        return None
+    except Exception as e:
+        logger.warning(f"⚠️ Error finding Emby item for {file_path}: {e}")
+        return None
+
+def refresh_emby_item(item_id: str, update_type: str = "Update"):
+    """
+    Refresh a specific Emby item.
+    update_type: "Update" for existing items, "Add" for new items
+    """
+    if not EMBY_SERVER_URL or not EMBY_API_KEY:
+        return False
+    
+    try:
+        url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Items/{item_id}/Refresh"
+        params = {
+            "Recursive": "false",
+            "ImageRefreshMode": "FullRefresh",
+            "MetadataRefreshMode": "FullRefresh",
+            "ReplaceAllImages": "false",
+            "ReplaceAllMetadata": "false"
+        }
+        headers = {
+            "X-Emby-Token": EMBY_API_KEY
+        }
+        
+        resp = requests.post(url, params=params, headers=headers, timeout=10)
+        resp.raise_for_status()
+        logger.info(f"✅ Emby item {item_id} refreshed ({update_type})")
+        return True
+    except Exception as e:
+        logger.warning(f"⚠️ Error refreshing Emby item {item_id}: {e}")
+        return False
+
+def refresh_emby_library_path(path: Path):
+    """
+    Trigger Emby library refresh for a specific path (for new items).
+    This is more efficient than a full library scan.
+    """
+    if not EMBY_SERVER_URL or not EMBY_API_KEY:
+        return False
+    
+    try:
+        url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Library/Refresh"
+        params = {
+            "Path": str(path),
+            "Recursive": "true"
+        }
+        headers = {
+            "X-Emby-Token": EMBY_API_KEY
+        }
+        
+        resp = requests.post(url, params=params, headers=headers, timeout=10)
+        resp.raise_for_status()
+        logger.info(f"✅ Emby library refresh triggered for {path}")
+        return True
+    except Exception as e:
+        logger.warning(f"⚠️ Error refreshing Emby library path {path}: {e}")
+        return False
+
+def notify_emby(filepath: Path, is_new: bool):
+    """
+    Notify Emby about a STRM file change.
+    For new files: trigger library refresh for the parent directory
+    For updated files: find item and refresh it
+    """
+    if not EMBY_SERVER_URL or not EMBY_API_KEY:
+        logger.debug(f"Emby notification skipped (not configured) for {filepath}")
+        return
+    
+    if is_new:
+        # For new items, trigger library refresh for the parent directory
+        # This will add the new item without a full library scan
+        refresh_emby_library_path(filepath.parent)
+    else:
+        # For updated items, find the item and refresh it
+        item_id = get_emby_item_by_path(filepath)
+        if item_id:
+            refresh_emby_item(item_id, "Update")
+        else:
+            # If item not found, try library refresh as fallback
+            logger.warning(f"⚠️ Item not found in Emby for {filepath}, triggering library refresh")
+            refresh_emby_library_path(filepath.parent)
 
 def cleanup_empty_dirs(base_dir: Path):
     for d in base_dir.iterdir():
         if d.is_dir() and not any(f.suffix == ".strm" for f in d.rglob("*")):
-            print(f"🗑 Removing empty or orphaned directory: {d}")
+            logger.info(f"🗑 Removing empty or orphaned directory: {d}")
             for f in d.rglob("*"):
                 f.unlink()
             d.rmdir()
@@ -103,38 +248,47 @@ def process_playlist():
             live_tv.append(info + "\n" + url)
 
     # Process movies
+    logger.info(f"Processing {len(movies)} movie(s)")
     for tvg_name, url in movies:
         folder_name = parse_movie_name(tvg_name)
-        write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
+        filepath, is_new = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
+        notify_emby(filepath, is_new)
 
     # Process series
+    logger.info(f"Processing {len(series)} series episode(s)")
     for tvg_name, url in series:
         folder_name = parse_series_name(tvg_name)
         season, episode = extract_season_episode(tvg_name)
-        write_strm_file(SERIES_DIR / folder_name / season, episode, url)
+        filepath, is_new = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
+        notify_emby(filepath, is_new)
 
     # Process live TV
     if live_tv:
+        logger.info(f"Processing {len(live_tv)} live TV channel(s)")
         LIVETV_DIR.mkdir(parents=True, exist_ok=True)
         live_file = LIVETV_DIR / "livetv.m3u"
         live_file.write_text("\n".join(live_tv), encoding="utf-8")
+        logger.debug(f"Live TV playlist saved to {live_file}")
 
     # Cleanup
     if REMOVE_FILES:
         cleanup_empty_dirs(MOVIES_DIR)
         cleanup_empty_dirs(SERIES_DIR)
 
-    print("✅ Processing complete.")
+    logger.info("✅ Processing complete.")
 
 def main():
+    logger.info("Starting M3U to STRM converter")
     while True:
         try:
             download_playlist()
             process_playlist()
         except Exception as e:
-            print(f"❌ Error: {e}")
+            logger.error(f"❌ Error: {e}", exc_info=True)
         if INTERVAL_SECONDS <= 0:
             break
+        if INTERVAL_SECONDS > 0:
+            logger.info(f"Waiting {INTERVAL_SECONDS} seconds until next update...")
         time.sleep(INTERVAL_SECONDS)
 
 if __name__ == "__main__":
