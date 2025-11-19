@@ -588,6 +588,110 @@ http://example.com/movie/12345
         # Verify warning was logged
         assert "Playlist contains no valid items" in caplog.text
         assert "Skipping orphan cleanup" in caplog.text
+    
+    def test_process_playlist_with_limit_movies(self, caplog):
+        """Test that MAX_ITEMS_PER_RUN limits movie processing"""
+        from parse_m3u import process_playlist
+        
+        # Create playlist with 5 movies
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="Movie 1 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 1 (2023)
+http://example.com/movie/1
+#EXTINF:-1 tvg-name="Movie 2 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 2 (2023)
+http://example.com/movie/2
+#EXTINF:-1 tvg-name="Movie 3 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 3 (2023)
+http://example.com/movie/3
+#EXTINF:-1 tvg-name="Movie 4 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 4 (2023)
+http://example.com/movie/4
+#EXTINF:-1 tvg-name="Movie 5 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 5 (2023)
+http://example.com/movie/5
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        # Set limit to 3 items
+        with patch('parse_m3u.MAX_ITEMS_PER_RUN', 3), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Verify only 3 movies were processed
+        movie_files = list(self.movies_dir.rglob("*.strm"))
+        assert len(movie_files) == 3, f"Expected 3 movies, got {len(movie_files)}"
+        
+        # Verify limit warning was logged
+        assert "Item processing limit reached" in caplog.text
+        assert "Skipping remaining 2 movie(s)" in caplog.text
+    
+    def test_process_playlist_with_limit_movies_and_series(self, caplog):
+        """Test that MAX_ITEMS_PER_RUN limits combined movies and series"""
+        from parse_m3u import process_playlist
+        
+        # Create playlist with 2 movies and 3 series
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="Movie 1 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 1 (2023)
+http://example.com/movie/1
+#EXTINF:-1 tvg-name="Movie 2 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 2 (2023)
+http://example.com/movie/2
+#EXTINF:-1 tvg-name="Series 1 (2023) S01E01" tvg-id="" tvg-logo="" group-title="Series",Series 1 (2023) S01E01
+http://example.com/series/1
+#EXTINF:-1 tvg-name="Series 1 (2023) S01E02" tvg-id="" tvg-logo="" group-title="Series",Series 1 (2023) S01E02
+http://example.com/series/2
+#EXTINF:-1 tvg-name="Series 1 (2023) S01E03" tvg-id="" tvg-logo="" group-title="Series",Series 1 (2023) S01E03
+http://example.com/series/3
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        # Set limit to 3 items (should process 2 movies + 1 series)
+        with patch('parse_m3u.MAX_ITEMS_PER_RUN', 3), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Verify 2 movies and 1 series were processed
+        movie_files = list(self.movies_dir.rglob("*.strm"))
+        series_files = list(self.series_dir.rglob("*.strm"))
+        assert len(movie_files) == 2, f"Expected 2 movies, got {len(movie_files)}"
+        assert len(series_files) == 1, f"Expected 1 series, got {len(series_files)}"
+        
+        # Verify limit warning was logged
+        assert "Item processing limit reached" in caplog.text
+        assert "Skipping remaining 2 series episode(s)" in caplog.text
+    
+    def test_process_playlist_with_limit_excludes_live_tv(self, caplog):
+        """Test that MAX_ITEMS_PER_RUN does not affect Live TV processing"""
+        from parse_m3u import process_playlist
+        
+        # Create playlist with 1 movie, 1 series, and 1 live TV
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="Movie 1 (2023)" tvg-id="" tvg-logo="" group-title="Movies",Movie 1 (2023)
+http://example.com/movie/1
+#EXTINF:-1 tvg-name="Series 1 (2023) S01E01" tvg-id="" tvg-logo="" group-title="Series",Series 1 (2023) S01E01
+http://example.com/series/1
+#EXTINF:-1 tvg-name="Live Channel" tvg-id="" tvg-logo="" group-title="Live TV",Live Channel
+http://example.com/live/12345
+"""
+        self.tmp_playlist.write_text(playlist_content)
+        
+        # Set limit to 1 item (should process 1 movie, skip series, but process Live TV)
+        with patch('parse_m3u.MAX_ITEMS_PER_RUN', 1), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Verify 1 movie was processed
+        movie_files = list(self.movies_dir.rglob("*.strm"))
+        assert len(movie_files) == 1, f"Expected 1 movie, got {len(movie_files)}"
+        
+        # Verify series was skipped
+        series_files = list(self.series_dir.rglob("*.strm"))
+        assert len(series_files) == 0, f"Expected 0 series, got {len(series_files)}"
+        
+        # Verify Live TV was still processed (not affected by limit)
+        live_file = self.livetv_dir / "livetv.m3u"
+        assert live_file.exists()
+        content = live_file.read_text()
+        assert "Live Channel" in content
+        assert "http://example.com/live/12345" in content
 
 
 if __name__ == "__main__":
