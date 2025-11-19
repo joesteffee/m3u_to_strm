@@ -332,6 +332,30 @@ class TestEmbyIntegration:
         batch_refresh_directories(directories)
         
         assert requests_mock.call_count == 2
+    
+    def test_delete_emby_item_success(self, requests_mock):
+        """Test successful item deletion from Emby"""
+        from parse_m3u import delete_emby_item
+        
+        requests_mock.delete(
+            "http://emby:8096/emby/Items/12345",
+            status_code=204
+        )
+        
+        result = delete_emby_item("12345")
+        assert result is True
+    
+    def test_delete_emby_item_error(self, requests_mock):
+        """Test item deletion error handling"""
+        from parse_m3u import delete_emby_item
+        
+        requests_mock.delete(
+            "http://emby:8096/emby/Items/12345",
+            status_code=404
+        )
+        
+        result = delete_emby_item("12345")
+        assert result is False
 
 
 class TestPlaylistProcessing:
@@ -444,6 +468,68 @@ http://example.com/username/password/1917227
         content = live_file.read_text()
         assert "Movie Channel" in content
         assert "1917227" in content
+    
+    def test_cleanup_orphaned_files_with_emby(self, requests_mock):
+        """Test cleanup of orphaned files with Emby deletion"""
+        from parse_m3u import cleanup_orphaned_files, REMOVE_ORPHANED
+        
+        # Create an orphaned file
+        orphaned_file = self.movies_dir / "Orphaned Movie" / "Orphaned Movie.strm"
+        orphaned_file.parent.mkdir(parents=True, exist_ok=True)
+        orphaned_file.write_text("http://example.com/orphaned")
+        
+        # Mock Emby API calls
+        requests_mock.get(
+            "http://emby:8096/emby/Items?Path=/test/path/Orphaned%20Movie/Orphaned%20Movie.strm&Recursive=false",
+            json={"Items": [{"Id": "12345"}]},
+            status_code=200
+        )
+        requests_mock.delete(
+            "http://emby:8096/emby/Items/12345",
+            status_code=204
+        )
+        
+        # Patch REMOVE_ORPHANED and Emby config
+        with patch('parse_m3u.REMOVE_ORPHANED', True), \
+             patch('parse_m3u.EMBY_SERVER_URL', 'http://emby:8096'), \
+             patch('parse_m3u.EMBY_API_KEY', 'test-key'), \
+             patch('parse_m3u.convert_to_emby_path', return_value='/test/path/Orphaned Movie/Orphaned Movie.strm'):
+            processed_files = set()  # No processed files, so orphaned_file is orphaned
+            cleanup_orphaned_files(processed_files, self.movies_dir, "movie")
+        
+        # Verify file was deleted
+        assert not orphaned_file.exists()
+        # Verify Emby deletion was called
+        assert requests_mock.call_count == 2  # GET to find item, DELETE to remove it
+    
+    def test_cleanup_orphaned_files_no_emby_item(self, requests_mock):
+        """Test cleanup of orphaned files when item not found in Emby"""
+        from parse_m3u import cleanup_orphaned_files
+        
+        # Create an orphaned file
+        orphaned_file = self.movies_dir / "Orphaned Movie" / "Orphaned Movie.strm"
+        orphaned_file.parent.mkdir(parents=True, exist_ok=True)
+        orphaned_file.write_text("http://example.com/orphaned")
+        
+        # Mock Emby API call - item not found
+        requests_mock.get(
+            "http://emby:8096/emby/Items?Path=/test/path/Orphaned%20Movie/Orphaned%20Movie.strm&Recursive=false",
+            json={"Items": []},
+            status_code=200
+        )
+        
+        # Patch REMOVE_ORPHANED and Emby config
+        with patch('parse_m3u.REMOVE_ORPHANED', True), \
+             patch('parse_m3u.EMBY_SERVER_URL', 'http://emby:8096'), \
+             patch('parse_m3u.EMBY_API_KEY', 'test-key'), \
+             patch('parse_m3u.convert_to_emby_path', return_value='/test/path/Orphaned Movie/Orphaned Movie.strm'):
+            processed_files = set()
+            cleanup_orphaned_files(processed_files, self.movies_dir, "movie")
+        
+        # Verify file was still deleted even if not in Emby
+        assert not orphaned_file.exists()
+        # Verify only GET was called (to find item), no DELETE
+        assert requests_mock.call_count == 1
 
 
 if __name__ == "__main__":

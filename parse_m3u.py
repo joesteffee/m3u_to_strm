@@ -234,6 +234,28 @@ def refresh_emby_library_path(path: Path):
         logger.warning(f"⚠️ Error triggering Emby library refresh for {path}: {e}")
         return False
 
+def delete_emby_item(item_id: str):
+    """
+    Delete an item from Emby library.
+    Returns True if successful, False otherwise.
+    """
+    if not EMBY_SERVER_URL or not EMBY_API_KEY:
+        return False
+    
+    try:
+        url = f"{EMBY_SERVER_URL.rstrip('/')}/emby/Items/{item_id}"
+        headers = {
+            "X-Emby-Token": EMBY_API_KEY
+        }
+        
+        resp = requests.delete(url, headers=headers, timeout=10)
+        resp.raise_for_status()
+        logger.info(f"✅ Emby item {item_id} deleted from library")
+        return True
+    except Exception as e:
+        logger.warning(f"⚠️ Error deleting Emby item {item_id}: {e}")
+        return False
+
 def notify_emby_updated(filepath: Path):
     """
     Notify Emby about an updated STRM file (URL changed).
@@ -297,12 +319,26 @@ def cleanup_orphaned_files(processed_files: Set[Path], base_dir: Path, content_t
     
     if orphaned_files:
         logger.info(f"Found {len(orphaned_files)} orphaned {content_type} STRM file(s) to remove")
+        deleted_count = 0
         for orphaned_file in orphaned_files:
             try:
+                # Try to find and delete the item from Emby before removing the file
+                if EMBY_SERVER_URL and EMBY_API_KEY:
+                    item_id = get_emby_item_by_path(orphaned_file)
+                    if item_id:
+                        delete_emby_item(item_id)
+                        deleted_count += 1
+                    else:
+                        logger.debug(f"Item not found in Emby for {orphaned_file}, skipping Emby deletion")
+                
+                # Remove the file from filesystem
                 orphaned_file.unlink()
                 logger.debug(f"🗑 Removed orphaned file: {orphaned_file}")
             except Exception as e:
                 logger.warning(f"⚠️ Error removing orphaned file {orphaned_file}: {e}")
+        
+        if deleted_count > 0:
+            logger.info(f"✅ Deleted {deleted_count} orphaned {content_type} item(s) from Emby library")
         
         # Clean up empty directories after removing orphaned files
         cleanup_empty_dirs(base_dir)
