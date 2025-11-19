@@ -278,22 +278,9 @@ class TestEmbyIntegration:
         result = refresh_emby_library_path(Path("/test/path"))
         assert result is True
     
-    def test_notify_emby_new_file(self, requests_mock):
-        """Test Emby notification for new file"""
-        from parse_m3u import notify_emby
-        
-        requests_mock.post(
-            "http://emby:8096/emby/Library/Refresh?Path=/test&Recursive=true",
-            status_code=204
-        )
-        
-        notify_emby(Path("/test/file.strm"), is_new=True, url_changed=False)
-        
-        assert requests_mock.call_count == 1
-    
     def test_notify_emby_updated_file(self, requests_mock):
         """Test Emby notification for updated file"""
-        from parse_m3u import notify_emby
+        from parse_m3u import notify_emby_updated
         
         requests_mock.get(
             "http://emby:8096/emby/Items?Path=/test/file.strm&Recursive=false",
@@ -305,17 +292,46 @@ class TestEmbyIntegration:
             status_code=204
         )
         
-        notify_emby(Path("/test/file.strm"), is_new=False, url_changed=True)
+        notify_emby_updated(Path("/test/file.strm"))
         
         assert requests_mock.call_count == 2
     
-    def test_notify_emby_no_changes(self, requests_mock):
-        """Test Emby notification skipped when no changes"""
-        from parse_m3u import notify_emby
+    def test_notify_emby_updated_file_not_found(self, requests_mock):
+        """Test Emby notification for updated file when item not found"""
+        from parse_m3u import notify_emby_updated
         
-        notify_emby(Path("/test/file.strm"), is_new=False, url_changed=False)
+        requests_mock.get(
+            "http://emby:8096/emby/Items?Path=/test/file.strm&Recursive=false",
+            json={"Items": []},
+            status_code=200
+        )
+        requests_mock.post(
+            "http://emby:8096/emby/Library/Refresh?Path=/test&Recursive=true",
+            status_code=204
+        )
         
-        assert requests_mock.call_count == 0
+        notify_emby_updated(Path("/test/file.strm"))
+        
+        assert requests_mock.call_count == 2
+    
+    def test_batch_refresh_directories(self, requests_mock):
+        """Test batch refresh of directories with new files"""
+        from parse_m3u import batch_refresh_directories
+        
+        directories = {Path("/test/movies/movie1"), Path("/test/movies/movie2")}
+        
+        requests_mock.post(
+            "http://emby:8096/emby/Library/Refresh?Path=/test/movies/movie1&Recursive=true",
+            status_code=204
+        )
+        requests_mock.post(
+            "http://emby:8096/emby/Library/Refresh?Path=/test/movies/movie2&Recursive=true",
+            status_code=204
+        )
+        
+        batch_refresh_directories(directories)
+        
+        assert requests_mock.call_count == 2
 
 
 class TestPlaylistProcessing:
@@ -358,7 +374,7 @@ http://example.com/movie/12345
 """
         self.tmp_playlist.write_text(playlist_content)
         
-        with patch('parse_m3u.notify_emby'):
+        with patch('parse_m3u.notify_emby_updated'), patch('parse_m3u.batch_refresh_directories'):
             process_playlist()
         
         # Check movie file was created
@@ -376,7 +392,7 @@ http://example.com/series/12345
 """
         self.tmp_playlist.write_text(playlist_content)
         
-        with patch('parse_m3u.notify_emby'):
+        with patch('parse_m3u.notify_emby_updated'), patch('parse_m3u.batch_refresh_directories'):
             process_playlist()
         
         # Check series file was created
@@ -394,7 +410,7 @@ http://example.com/live/12345
 """
         self.tmp_playlist.write_text(playlist_content)
         
-        with patch('parse_m3u.notify_emby'):
+        with patch('parse_m3u.notify_emby_updated'), patch('parse_m3u.batch_refresh_directories'):
             process_playlist()
         
         # Check live TV file was created
@@ -415,7 +431,7 @@ http://example.com/username/password/1917227
 """
         self.tmp_playlist.write_text(playlist_content)
         
-        with patch('parse_m3u.notify_emby'):
+        with patch('parse_m3u.notify_emby_updated'), patch('parse_m3u.batch_refresh_directories'):
             process_playlist()
         
         # Should NOT create a movie STRM file
