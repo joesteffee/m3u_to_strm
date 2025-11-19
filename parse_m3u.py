@@ -6,7 +6,7 @@ import time
 import logging
 import requests
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Set
 
 # Configure logging to stdout
 logging.basicConfig(
@@ -25,6 +25,7 @@ MOVIES_DIR = Path("/usr/src/app/movies")
 SERIES_DIR = Path("/usr/src/app/series")
 LIVETV_DIR = Path("/usr/src/app/livetv")
 REMOVE_FILES = os.environ.get("REMOVE_FILES", "false").lower() == "true"
+REMOVE_ORPHANED = os.environ.get("REMOVE_ORPHANED", "false").lower() == "true"
 INTERVAL_SECONDS = int(os.environ.get("INTERVAL_SECONDS", "0"))
 
 # Path mapping for Emby (container path -> host path)
@@ -262,6 +263,34 @@ def cleanup_empty_dirs(base_dir: Path):
                 f.unlink()
             d.rmdir()
 
+def find_all_strm_files(base_dir: Path) -> Set[Path]:
+    """Find all existing STRM files in a directory."""
+    strm_files = set()
+    if base_dir.exists():
+        for strm_file in base_dir.rglob("*.strm"):
+            strm_files.add(strm_file)
+    return strm_files
+
+def cleanup_orphaned_files(processed_files: Set[Path], base_dir: Path, content_type: str):
+    """Remove STRM files that exist in the directory but weren't in the current playlist."""
+    if not REMOVE_ORPHANED:
+        return
+    
+    existing_files = find_all_strm_files(base_dir)
+    orphaned_files = existing_files - processed_files
+    
+    if orphaned_files:
+        logger.info(f"Found {len(orphaned_files)} orphaned {content_type} STRM file(s) to remove")
+        for orphaned_file in orphaned_files:
+            try:
+                orphaned_file.unlink()
+                logger.debug(f"🗑 Removed orphaned file: {orphaned_file}")
+            except Exception as e:
+                logger.warning(f"⚠️ Error removing orphaned file {orphaned_file}: {e}")
+        
+        # Clean up empty directories after removing orphaned files
+        cleanup_empty_dirs(base_dir)
+
 def process_playlist():
     movies = []
     series = []
@@ -326,11 +355,16 @@ def process_playlist():
         logger.warning(f"Skipped {no_tvg_name_count} entries without tvg-name")
     logger.info(f"Classified: {len(movies)} movies, {len(series)} series, {len(live_tv)} live TV")
 
+    # Track all processed files for orphan cleanup
+    processed_movie_files = set()
+    processed_series_files = set()
+
     # Process movies
     logger.info(f"Processing {len(movies)} movie(s)")
     for tvg_name, url in movies:
         folder_name = parse_movie_name(tvg_name)
         filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
+        processed_movie_files.add(filepath)
         notify_emby(filepath, is_new, url_changed)
 
     # Process series
@@ -339,6 +373,7 @@ def process_playlist():
         folder_name = parse_series_name(tvg_name)
         season, episode = extract_season_episode(tvg_name)
         filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
+        processed_series_files.add(filepath)
         notify_emby(filepath, is_new, url_changed)
 
     # Process live TV
@@ -349,7 +384,11 @@ def process_playlist():
         live_file.write_text("\n".join(live_tv), encoding="utf-8")
         logger.debug(f"Live TV playlist saved to {live_file}")
 
-    # Cleanup
+    # Cleanup orphaned files (files that exist but weren't in current playlist)
+    cleanup_orphaned_files(processed_movie_files, MOVIES_DIR, "movie")
+    cleanup_orphaned_files(processed_series_files, SERIES_DIR, "series")
+
+    # Cleanup empty directories
     if REMOVE_FILES:
         cleanup_empty_dirs(MOVIES_DIR)
         cleanup_empty_dirs(SERIES_DIR)
