@@ -58,6 +58,16 @@ def parse_movie_name(tvg_name: str):
     year = year_match.group(0) if year_match else ''
     # Remove all parentheses content (including year and other info)
     tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
+    
+    # Remove actor names in all caps at the end (before year was removed)
+    # Only remove if there's mixed-case content before it (indicating it's an actor name, not the title)
+    # Pattern: mixed-case title + space + ALL_CAPS_NAME (one or more words, all caps)
+    # Examples: "The Pledge JACK NICHOLSON", "Movie Name BRAD PITT"
+    # Don't remove if entire title is all caps (e.g., "JACK RYAN")
+    if re.search(r'[a-z]', tvg_name):  # Has lowercase letters (mixed case)
+        # Match all-caps words at the end (2+ letters, can be multiple words)
+        tvg_name = re.sub(r'\s+[A-Z]{2,}(?:\s+[A-Z]{2,})*$', '', tvg_name).strip()
+    
     # Add year back if it was present
     if year:
         tvg_name += f" {year}"

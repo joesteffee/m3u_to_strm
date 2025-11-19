@@ -55,6 +55,15 @@ class TestFilenameParsing:
         
         # Invalid characters
         assert parse_movie_name("EN - Movie: Name (2023)") == "Movie Name (2023)"
+        
+        # Remove actor names in all caps at the end
+        assert parse_movie_name("The Pledge JACK NICHOLSON (2001)") == "The Pledge (2001)"
+        assert parse_movie_name("Movie Name BRAD PITT (2023)") == "Movie Name (2023)"
+        assert parse_movie_name("EN - Movie Name TOM CRUISE (2020)") == "Movie Name (2020)"
+        # Don't remove if it's part of the title (not all caps at end)
+        assert parse_movie_name("JACK RYAN (2018)") == "JACK RYAN (2018)"  # Title itself is all caps
+        # Don't remove single capital letters or short words
+        assert parse_movie_name("Movie A (2023)") == "Movie A (2023)"
     
     def test_parse_series_name(self):
         """Test series name parsing"""
