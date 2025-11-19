@@ -6,7 +6,9 @@ import os
 import pytest
 import tempfile
 import shutil
+import os
 from pathlib import Path
+from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock, Mock
 import requests_mock
 
@@ -747,6 +749,130 @@ http://example.com/movie/5
         assert "Movie 2 (2023)" in movie_names
         assert "Movie 3 (2023)" in movie_names
         assert "Movie 4 (2023)" in movie_names
+
+
+class TestDownloadPlaylist:
+    """Test M3U playlist download with caching"""
+    
+    def setup_method(self):
+        """Set up temporary directory"""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.tmp_playlist = self.temp_dir / "playlist.m3u"
+        
+        # Patch TMP_PLAYLIST
+        self.tmp_playlist_patcher = patch('parse_m3u.TMP_PLAYLIST', self.tmp_playlist)
+        self.tmp_playlist_patcher.start()
+    
+    def teardown_method(self):
+        """Clean up"""
+        self.tmp_playlist_patcher.stop()
+        if self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def test_download_playlist_file_not_exists(self, requests_mock):
+        """Test download when file doesn't exist"""
+        from parse_m3u import download_playlist
+        
+        requests_mock.get(
+            "http://example.com/playlist.m3u",
+            text="#EXTM3U\n#EXTINF:-1,Test\nhttp://example.com/test",
+            status_code=200
+        )
+        
+        with patch('parse_m3u.M3U_URL', 'http://example.com/playlist.m3u'):
+            download_playlist()
+        
+        assert self.tmp_playlist.exists()
+        assert requests_mock.call_count == 1
+    
+    def test_download_playlist_file_empty(self, requests_mock):
+        """Test download when file is empty"""
+        from parse_m3u import download_playlist
+        
+        # Create empty file
+        self.tmp_playlist.write_text("")
+        
+        requests_mock.get(
+            "http://example.com/playlist.m3u",
+            text="#EXTM3U\n#EXTINF:-1,Test\nhttp://example.com/test",
+            status_code=200
+        )
+        
+        with patch('parse_m3u.M3U_URL', 'http://example.com/playlist.m3u'):
+            download_playlist()
+        
+        assert self.tmp_playlist.stat().st_size > 0
+        assert requests_mock.call_count == 1
+    
+    def test_download_playlist_file_too_old(self, requests_mock):
+        """Test download when file is older than cache duration"""
+        from parse_m3u import download_playlist
+        from datetime import datetime, timedelta
+        
+        # Create file with old timestamp (9 hours ago)
+        self.tmp_playlist.write_text("#EXTM3U\n#EXTINF:-1,Test\nhttp://example.com/test")
+        old_time = (datetime.now() - timedelta(hours=9)).timestamp()
+        os.utime(self.tmp_playlist, (old_time, old_time))
+        
+        requests_mock.get(
+            "http://example.com/playlist.m3u",
+            text="#EXTM3U\n#EXTINF:-1,Test Updated\nhttp://example.com/test",
+            status_code=200
+        )
+        
+        with patch('parse_m3u.M3U_URL', 'http://example.com/playlist.m3u'), \
+             patch('parse_m3u.M3U_CACHE_HOURS', 8):
+            download_playlist()
+        
+        assert requests_mock.call_count == 1
+        assert "Test Updated" in self.tmp_playlist.read_text()
+    
+    def test_download_playlist_file_recent(self, requests_mock):
+        """Test that recent file is not re-downloaded"""
+        from parse_m3u import download_playlist
+        
+        # Create file with recent timestamp (1 hour ago)
+        self.tmp_playlist.write_text("#EXTM3U\n#EXTINF:-1,Test\nhttp://example.com/test")
+        recent_time = (datetime.now() - timedelta(hours=1)).timestamp()
+        os.utime(self.tmp_playlist, (recent_time, recent_time))
+        
+        requests_mock.get(
+            "http://example.com/playlist.m3u",
+            text="#EXTM3U\n#EXTINF:-1,Test Updated\nhttp://example.com/test",
+            status_code=200
+        )
+        
+        with patch('parse_m3u.M3U_URL', 'http://example.com/playlist.m3u'), \
+             patch('parse_m3u.M3U_CACHE_HOURS', 8):
+            download_playlist()
+        
+        # Should not download
+        assert requests_mock.call_count == 0
+        assert "Test Updated" not in self.tmp_playlist.read_text()
+        assert "Test" in self.tmp_playlist.read_text()
+    
+    def test_download_playlist_custom_cache_duration(self, requests_mock):
+        """Test custom cache duration"""
+        from parse_m3u import download_playlist
+        from datetime import datetime, timedelta
+        
+        # Create file with timestamp 3 hours ago
+        self.tmp_playlist.write_text("#EXTM3U\n#EXTINF:-1,Test\nhttp://example.com/test")
+        old_time = (datetime.now() - timedelta(hours=3)).timestamp()
+        os.utime(self.tmp_playlist, (old_time, old_time))
+        
+        requests_mock.get(
+            "http://example.com/playlist.m3u",
+            text="#EXTM3U\n#EXTINF:-1,Test Updated\nhttp://example.com/test",
+            status_code=200
+        )
+        
+        # Set cache to 2 hours (file is 3 hours old, should download)
+        with patch('parse_m3u.M3U_URL', 'http://example.com/playlist.m3u'), \
+             patch('parse_m3u.M3U_CACHE_HOURS', 2):
+            download_playlist()
+        
+        assert requests_mock.call_count == 1
 
 
 if __name__ == "__main__":
