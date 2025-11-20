@@ -878,6 +878,233 @@ class TestDownloadPlaylist:
         assert requests_mock.call_count == 1
 
 
+class TestDuplicateHandling:
+    """Test duplicate quality version handling"""
+    
+    def setup_method(self):
+        """Set up temporary directory"""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.movies_dir = self.temp_dir / "movies"
+        self.series_dir = self.temp_dir / "series"
+        
+        # Patch the directory paths
+        self.movies_patcher = patch('parse_m3u.MOVIES_DIR', self.movies_dir)
+        self.series_patcher = patch('parse_m3u.SERIES_DIR', self.series_dir)
+        self.movies_patcher.start()
+        self.series_patcher.start()
+    
+    def teardown_method(self):
+        """Clean up"""
+        self.movies_patcher.stop()
+        self.series_patcher.stop()
+        if self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def test_extract_content_id_movie(self):
+        """Test extracting content ID from movie URL"""
+        from parse_m3u import extract_content_id
+        
+        url1 = "http://example.com/movie/user/pass/123456.mp4"
+        url2 = "http://example.com/movie/user/pass/789012.mp4"
+        url3 = "http://example.com/movie/user/pass/345678.mkv"
+        url_no_id = "http://example.com/movie/user/pass/video.mp4"
+        
+        assert extract_content_id(url1) == "123456"
+        assert extract_content_id(url2) == "789012"
+        assert extract_content_id(url3) == "345678"
+        assert extract_content_id(url_no_id) is None
+    
+    def test_extract_content_id_series(self):
+        """Test extracting content ID from series URL"""
+        from parse_m3u import extract_content_id
+        
+        url1 = "http://example.com/series/user/pass/111222.mkv"
+        url2 = "http://example.com/series/user/pass/333444.avi"
+        
+        assert extract_content_id(url1) == "111222"
+        assert extract_content_id(url2) == "333444"
+    
+    def test_write_strm_file_duplicate_movie(self):
+        """Test creating duplicate movie files with different IDs"""
+        from parse_m3u import write_strm_file
+        
+        # First version
+        filepath1, is_new1, url_changed1 = write_strm_file(
+            self.movies_dir / "Test Movie (2021)",
+            "Test Movie (2021)",
+            "http://example.com/movie/user/pass/123456.mp4",
+            "123456"
+        )
+        
+        assert is_new1 is True
+        assert url_changed1 is False
+        assert filepath1.name == "Test Movie (2021).strm"
+        assert filepath1.exists()
+        
+        # Second version with different ID
+        filepath2, is_new2, url_changed2 = write_strm_file(
+            self.movies_dir / "Test Movie (2021)",
+            "Test Movie (2021)",
+            "http://example.com/movie/user/pass/789012.mp4",
+            "789012"
+        )
+        
+        assert is_new2 is True  # New file created
+        assert url_changed2 is False
+        assert filepath2.name == "Test Movie (2021) [789012].strm"
+        assert filepath2.exists()
+        
+        # Both files should exist
+        assert filepath1.exists()
+        assert filepath2.exists()
+        
+        # Verify URLs are different
+        assert filepath1.read_text().strip() == "http://example.com/movie/user/pass/123456.mp4"
+        assert filepath2.read_text().strip() == "http://example.com/movie/user/pass/789012.mp4"
+    
+    def test_write_strm_file_duplicate_series(self):
+        """Test creating duplicate series files with different IDs"""
+        from parse_m3u import write_strm_file
+        
+        season_dir = self.series_dir / "Test Series (2021)" / "Season 1"
+        
+        # First version
+        filepath1, is_new1, url_changed1 = write_strm_file(
+            season_dir,
+            "S01E01",
+            "http://example.com/series/user/pass/111222.mkv",
+            "111222"
+        )
+        
+        assert is_new1 is True
+        assert filepath1.name == "S01E01.strm"
+        assert filepath1.exists()
+        
+        # Second version with different ID
+        filepath2, is_new2, url_changed2 = write_strm_file(
+            season_dir,
+            "S01E01",
+            "http://example.com/series/user/pass/333444.mkv",
+            "333444"
+        )
+        
+        assert is_new2 is True
+        assert filepath2.name == "S01E01 [333444].strm"
+        assert filepath2.exists()
+        
+        # Both files should exist
+        assert filepath1.exists()
+        assert filepath2.exists()
+    
+    def test_write_strm_file_same_id_updates(self):
+        """Test that same ID updates existing file instead of creating duplicate"""
+        from parse_m3u import write_strm_file
+        
+        # First write
+        filepath1, is_new1, url_changed1 = write_strm_file(
+            self.movies_dir / "Test Movie (2021)",
+            "Test Movie (2021)",
+            "http://example.com/movie/user/pass/123456.mp4",
+            "123456"
+        )
+        
+        assert is_new1 is True
+        assert filepath1.name == "Test Movie (2021).strm"
+        
+        # Update with same ID but different URL
+        filepath2, is_new2, url_changed2 = write_strm_file(
+            self.movies_dir / "Test Movie (2021)",
+            "Test Movie (2021)",
+            "http://example.com/movie/user/pass/123456_updated.mp4",
+            "123456"
+        )
+        
+        assert is_new2 is False  # Not new, same file
+        assert url_changed2 is True  # URL changed
+        assert filepath2 == filepath1  # Same filepath
+        assert filepath2.read_text().strip() == "http://example.com/movie/user/pass/123456_updated.mp4"
+    
+    def test_process_playlist_duplicate_movies(self, caplog):
+        """Test processing playlist with duplicate movie versions"""
+        from parse_m3u import process_playlist, parse_movie_name
+        
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="D+ - Test Movie  (2021)" tvg-id="" tvg-logo="" group-title="MOVIES",D+ - Test Movie  (2021)
+http://example.com/movie/user/pass/123456.mp4
+#EXTINF:-1 tvg-name="D+ - Test Movie  (2021)" tvg-id="" tvg-logo="" group-title="MOVIES",D+ - Test Movie  (2021)
+http://example.com/movie/user/pass/789012.mp4
+"""
+        tmp_playlist = self.temp_dir / "playlist.m3u"
+        tmp_playlist.write_text(playlist_content)
+        
+        with patch('parse_m3u.TMP_PLAYLIST', tmp_playlist), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Get the actual parsed name
+        folder_name = parse_movie_name("D+ - Test Movie  (2021)")
+        movie_dir = self.movies_dir / folder_name
+        files = list(movie_dir.glob("*.strm"))
+        
+        assert len(files) == 2, f"Expected 2 files, got {len(files)}. Files: {[f.name for f in files]}"
+        
+        file_names = {f.name for f in files}
+        assert f"{folder_name}.strm" in file_names
+        assert f"{folder_name} [789012].strm" in file_names
+        
+        # Verify URLs are correct
+        for file in files:
+            content = file.read_text().strip()
+            if "123456" in content:
+                assert content == "http://example.com/movie/user/pass/123456.mp4"
+            elif "789012" in content:
+                assert content == "http://example.com/movie/user/pass/789012.mp4"
+    
+    def test_process_playlist_duplicate_series(self, caplog):
+        """Test processing playlist with duplicate series versions"""
+        from parse_m3u import process_playlist
+        
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="EN - Test Series (2023) S01E01" tvg-id="" tvg-logo="" group-title="Series",Test Series (2023) S01E01
+http://example.com/series/user/pass/111222.mkv
+#EXTINF:-1 tvg-name="EN - Test Series (2023) S01E01" tvg-id="" tvg-logo="" group-title="Series",Test Series (2023) S01E01
+http://example.com/series/user/pass/333444.mkv
+"""
+        tmp_playlist = self.temp_dir / "playlist.m3u"
+        tmp_playlist.write_text(playlist_content)
+        
+        with patch('parse_m3u.TMP_PLAYLIST', tmp_playlist), \
+             patch('parse_m3u.notify_emby_updated'), \
+             patch('parse_m3u.batch_refresh_directories'):
+            process_playlist()
+        
+        # Check that both versions were created
+        series_dir = self.series_dir / "Test Series (2023)" / "Season 1"
+        files = list(series_dir.glob("*.strm"))
+        
+        assert len(files) == 2, f"Expected 2 files, got {len(files)}"
+        
+        file_names = {f.name for f in files}
+        assert "S01E01.strm" in file_names
+        assert "S01E01 [333444].strm" in file_names
+    
+    def test_write_strm_file_no_id_creates_base(self):
+        """Test that files without IDs use base filename"""
+        from parse_m3u import write_strm_file
+        
+        filepath, is_new, url_changed = write_strm_file(
+            self.movies_dir / "Test Movie (2021)",
+            "Test Movie (2021)",
+            "http://example.com/movie/video.mp4",
+            None
+        )
+        
+        assert is_new is True
+        assert filepath.name == "Test Movie (2021).strm"
+        assert filepath.exists()
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 

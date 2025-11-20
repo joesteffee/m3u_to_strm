@@ -131,30 +131,72 @@ def extract_season_episode(tvg_name: str):
         return season, episode
     return "Season 1", "S01E01"
 
-def write_strm_file(directory: Path, filename: str, url: str) -> Tuple[Path, bool, bool]:
+def extract_content_id(url: str) -> Optional[str]:
+    """
+    Extract content ID from URL for duplicate detection.
+    Examples:
+    - http://example.com/movie/.../822036.mp4 -> "822036"
+    - http://example.com/series/.../859140.mkv -> "859140"
+    """
+    # Match the last number before the file extension
+    match = re.search(r'/(\d+)\.(mp4|mkv|avi|mov|m4v)$', url, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    return None
+
+def write_strm_file(directory: Path, filename: str, url: str, content_id: Optional[str] = None) -> Tuple[Path, bool, bool]:
     """
     Write a STRM file and return the filepath, whether it was newly created, and if URL changed.
+    If content_id is provided and a file with the same base name but different ID exists,
+    creates a new file with the ID appended to handle duplicate quality versions.
     Returns: (filepath, is_new, url_changed)
     """
     directory.mkdir(parents=True, exist_ok=True)
-    filepath = directory / f"{filename}.strm"
-    is_new = not filepath.exists()
+    
+    # Check for existing files with same base name but different IDs
+    base_filepath = directory / f"{filename}.strm"
+    final_filepath = base_filepath
+    
+    if content_id:
+        # Check if base file exists with different URL/ID
+        if base_filepath.exists():
+            try:
+                existing_url = base_filepath.read_text(encoding="utf-8").strip()
+                existing_id = extract_content_id(existing_url)
+                # If existing file has different ID, create new file with ID appended
+                if existing_id and existing_id != content_id:
+                    final_filepath = directory / f"{filename} [{content_id}].strm"
+                    logger.debug(f"Duplicate version detected: creating {final_filepath.name} (existing: {existing_id}, new: {content_id})")
+            except Exception:
+                pass
+        else:
+            # Check if a file with this ID already exists
+            id_filepath = directory / f"{filename} [{content_id}].strm"
+            if id_filepath.exists():
+                final_filepath = id_filepath
+            else:
+                # Use base filename for first version
+                final_filepath = base_filepath
+    else:
+        final_filepath = base_filepath
+    
+    is_new = not final_filepath.exists()
     
     # Read existing content to check if URL changed
     url_changed = False
     if not is_new:
         try:
-            existing_url = filepath.read_text(encoding="utf-8").strip()
+            existing_url = final_filepath.read_text(encoding="utf-8").strip()
             url_changed = existing_url != url
         except Exception:
             url_changed = True
     
-    filepath.write_text(url, encoding="utf-8")
+    final_filepath.write_text(url, encoding="utf-8")
     if is_new:
-        logger.debug(f"Created new STRM file: {filepath}")
+        logger.debug(f"Created new STRM file: {final_filepath}")
     elif url_changed:
-        logger.debug(f"Updated STRM file (URL changed): {filepath}")
-    return filepath, is_new, url_changed
+        logger.debug(f"Updated STRM file (URL changed): {final_filepath}")
+    return final_filepath, is_new, url_changed
 
 def convert_to_emby_path(file_path: Path) -> str:
     """
@@ -483,22 +525,33 @@ def process_playlist():
     movies_skipped_unchanged = 0
     for tvg_name, url in movies:
         folder_name = parse_movie_name(tvg_name)
-        filepath = MOVIES_DIR / folder_name / f"{folder_name}.strm"
+        content_id = extract_content_id(url)
+        
+        # Check for existing files (base name or with ID)
+        base_filepath = MOVIES_DIR / folder_name / f"{folder_name}.strm"
+        possible_filepaths = [base_filepath]
+        if content_id:
+            id_filepath = MOVIES_DIR / folder_name / f"{folder_name} [{content_id}].strm"
+            possible_filepaths.append(id_filepath)
         
         # Check if file exists and hasn't changed (skip unchanged items, don't count towards limit)
         is_unchanged = False
-        if filepath.exists():
-            try:
-                existing_url = filepath.read_text(encoding="utf-8").strip()
-                if existing_url == url:
-                    is_unchanged = True
-            except Exception:
-                pass
+        existing_filepath = None
+        for filepath in possible_filepaths:
+            if filepath.exists():
+                try:
+                    existing_url = filepath.read_text(encoding="utf-8").strip()
+                    if existing_url == url:
+                        is_unchanged = True
+                        existing_filepath = filepath
+                        break
+                except Exception:
+                    pass
         
         # Skip unchanged items (don't count towards limit, but track for orphan cleanup)
-        if is_unchanged:
+        if is_unchanged and existing_filepath:
             movies_skipped_unchanged += 1
-            processed_movie_files.add(filepath)
+            processed_movie_files.add(existing_filepath)
             continue
         
         # Check if limit reached for items that need processing
@@ -509,7 +562,7 @@ def process_playlist():
             break
         
         # Process the item (new or changed)
-        filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url)
+        filepath, is_new, url_changed = write_strm_file(MOVIES_DIR / folder_name, folder_name, url, content_id)
         processed_movie_files.add(filepath)
         total_items_processed += 1
         movies_processed += 1
@@ -542,22 +595,33 @@ def process_playlist():
     for tvg_name, url in series:
         folder_name = parse_series_name(tvg_name)
         season, episode = extract_season_episode(tvg_name)
-        filepath = SERIES_DIR / folder_name / season / f"{episode}.strm"
+        content_id = extract_content_id(url)
+        
+        # Check for existing files (base name or with ID)
+        base_filepath = SERIES_DIR / folder_name / season / f"{episode}.strm"
+        possible_filepaths = [base_filepath]
+        if content_id:
+            id_filepath = SERIES_DIR / folder_name / season / f"{episode} [{content_id}].strm"
+            possible_filepaths.append(id_filepath)
         
         # Check if file exists and hasn't changed (skip unchanged items, don't count towards limit)
         is_unchanged = False
-        if filepath.exists():
-            try:
-                existing_url = filepath.read_text(encoding="utf-8").strip()
-                if existing_url == url:
-                    is_unchanged = True
-            except Exception:
-                pass
+        existing_filepath = None
+        for filepath in possible_filepaths:
+            if filepath.exists():
+                try:
+                    existing_url = filepath.read_text(encoding="utf-8").strip()
+                    if existing_url == url:
+                        is_unchanged = True
+                        existing_filepath = filepath
+                        break
+                except Exception:
+                    pass
         
         # Skip unchanged items (don't count towards limit, but track for orphan cleanup)
-        if is_unchanged:
+        if is_unchanged and existing_filepath:
             series_skipped_unchanged += 1
-            processed_series_files.add(filepath)
+            processed_series_files.add(existing_filepath)
             continue
         
         # Check if limit reached for items that need processing
@@ -568,7 +632,7 @@ def process_playlist():
             break
         
         # Process the item (new or changed)
-        filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url)
+        filepath, is_new, url_changed = write_strm_file(SERIES_DIR / folder_name / season, episode, url, content_id)
         processed_series_files.add(filepath)
         total_items_processed += 1
         series_processed += 1
