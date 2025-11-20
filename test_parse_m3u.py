@@ -62,6 +62,9 @@ class TestFilenameParsing:
         assert parse_movie_name("The Pledge JACK NICHOLSON (2001)") == "The Pledge (2001)"
         assert parse_movie_name("Movie Name BRAD PITT (2023)") == "Movie Name (2023)"
         assert parse_movie_name("EN - Movie Name TOM CRUISE (2020)") == "Movie Name (2020)"
+        # Remove actor names with comma
+        assert parse_movie_name("All The President's Men DUSTIN HOFFMAN, (1976)") == "All The President's Men (1976)"
+        assert parse_movie_name("Movie Name BRAD PITT, (2023)") == "Movie Name (2023)"
         # Don't remove if it's part of the title (not all caps at end)
         assert parse_movie_name("JACK RYAN (2018)") == "JACK RYAN (2018)"  # Title itself is all caps
         # Don't remove single capital letters or short words
