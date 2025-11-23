@@ -39,6 +39,10 @@ EMBY_MOVIES_PATH = os.environ.get("EMBY_MOVIES_PATH")
 EMBY_SERIES_PATH = os.environ.get("EMBY_SERIES_PATH")
 EMBY_LIVETV_PATH = os.environ.get("EMBY_LIVETV_PATH")
 
+# Country code filtering
+FILTER_COUNTRY_CODES = set(code.strip().upper() for code in os.environ.get("FILTER_COUNTRY_CODES", "").split(",") if code.strip())
+INCLUDE_COUNTRY_CODES = set(code.strip().upper() for code in os.environ.get("INCLUDE_COUNTRY_CODES", "").split(",") if code.strip())
+
 # Temporary M3U file
 TMP_PLAYLIST = Path("/tmp/playlist.m3u")
 
@@ -143,6 +147,55 @@ def extract_content_id(url: str) -> Optional[str]:
     if match:
         return match.group(1)
     return None
+
+def extract_country_code(tvg_name: str) -> Optional[str]:
+    """
+    Extract country code from channel name if it matches the pattern.
+    Pattern: Two uppercase letters followed by a pipe (e.g., AR|, NL|, FR|, US|)
+    Examples:
+    - "AR| BEIN SPORT" -> "AR"
+    - "US| CNN" -> "US"
+    - "Regular Channel" -> None
+    """
+    match = re.match(r'^([A-Z]{2})\|', tvg_name)
+    if match:
+        return match.group(1)
+    return None
+
+def should_filter_channel(tvg_name: str, include_codes: Set[str], filter_codes: Set[str]) -> bool:
+    """
+    Determine if a channel should be filtered out based on country code filtering rules.
+    
+    Args:
+        tvg_name: The channel name (tvg-name attribute)
+        include_codes: Set of country codes to include (if set, only these are included)
+        filter_codes: Set of country codes to exclude (if include_codes not set, these are excluded)
+    
+    Returns:
+        True if channel should be filtered out, False if it should be included
+    
+    Logic:
+        - Channels without country codes are always included (return False)
+        - If include_codes is set: filter out if country code NOT in include list
+        - Else if filter_codes is set: filter out if country code IS in filter list
+        - Else: don't filter (return False)
+    """
+    country_code = extract_country_code(tvg_name)
+    
+    # Channels without country codes are always included
+    if country_code is None:
+        return False
+    
+    # If include_codes is set, only include channels with codes in the include list
+    if include_codes:
+        return country_code not in include_codes
+    
+    # If filter_codes is set, exclude channels with codes in the filter list
+    if filter_codes:
+        return country_code in filter_codes
+    
+    # No filtering configured
+    return False
 
 def write_strm_file(directory: Path, filename: str, url: str, content_id: Optional[str] = None) -> Tuple[Path, bool, bool]:
     """
@@ -439,6 +492,7 @@ def process_playlist():
     
     extinf_count = 0
     no_tvg_name_count = 0
+    filtered_live_tv_count = 0
     i = 0
     while i < len(lines):
         if not lines[i].startswith("#EXTINF"):
@@ -486,11 +540,27 @@ def process_playlist():
             movies.append((tvg_name, url))
             logger.debug(f"Found movie: {tvg_name} (group: {group_title})")
         else:
-            live_tv.append(info + "\n" + url)
+            # Check if this live TV channel should be filtered
+            if should_filter_channel(tvg_name, INCLUDE_COUNTRY_CODES, FILTER_COUNTRY_CODES):
+                filtered_live_tv_count += 1
+                country_code = extract_country_code(tvg_name)
+                logger.debug(f"Filtered live TV channel: {tvg_name} (country code: {country_code})")
+            else:
+                live_tv.append(info + "\n" + url)
     
     logger.info(f"Found {extinf_count} #EXTINF entries")
     if no_tvg_name_count > 0:
         logger.warning(f"Skipped {no_tvg_name_count} entries without tvg-name")
+    
+    # Log filtering summary
+    if INCLUDE_COUNTRY_CODES:
+        logger.info(f"Country code filtering: INCLUDE mode active (only: {', '.join(sorted(INCLUDE_COUNTRY_CODES))})")
+    elif FILTER_COUNTRY_CODES:
+        logger.info(f"Country code filtering: EXCLUDE mode active (excluding: {', '.join(sorted(FILTER_COUNTRY_CODES))})")
+    
+    if filtered_live_tv_count > 0:
+        logger.info(f"Filtered out {filtered_live_tv_count} live TV channel(s) based on country code rules")
+    
     logger.info(f"Classified: {len(movies)} movies, {len(series)} series, {len(live_tv)} live TV")
 
     # Safety check: If playlist is empty or has no valid entries, skip orphan cleanup

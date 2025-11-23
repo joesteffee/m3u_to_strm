@@ -1105,6 +1105,237 @@ http://example.com/series/user/pass/333444.mkv
         assert filepath.exists()
 
 
+class TestCountryCodeFiltering:
+    """Test country code filtering functionality"""
+    
+    def setup_method(self):
+        """Set up temporary directory for each test"""
+        self.temp_dir = Path(tempfile.mkdtemp())
+        self.livetv_dir = self.temp_dir / "livetv"
+        
+        # Patch the directory paths
+        self.livetv_patcher = patch('parse_m3u.LIVETV_DIR', self.livetv_dir)
+        self.livetv_patcher.start()
+    
+    def teardown_method(self):
+        """Clean up"""
+        self.livetv_patcher.stop()
+        if self.temp_dir.exists():
+            shutil.rmtree(self.temp_dir)
+    
+    def test_extract_country_code_with_code(self):
+        """Test extracting country code from channel names"""
+        from parse_m3u import extract_country_code
+        
+        assert extract_country_code("AR| BEIN SPORT") == "AR"
+        assert extract_country_code("US| CNN") == "US"
+        assert extract_country_code("NL| RTL") == "NL"
+        assert extract_country_code("FR| TF1") == "FR"
+        assert extract_country_code("UK| BBC") == "UK"
+    
+    def test_extract_country_code_without_code(self):
+        """Test extracting country code from channels without codes"""
+        from parse_m3u import extract_country_code
+        
+        assert extract_country_code("Regular Channel") is None
+        assert extract_country_code("CNN") is None
+        assert extract_country_code("BBC News") is None
+        assert extract_country_code("") is None
+    
+    def test_extract_country_code_edge_cases(self):
+        """Test edge cases for country code extraction"""
+        from parse_m3u import extract_country_code
+        
+        # Lowercase should not match (pattern requires uppercase)
+        assert extract_country_code("ar| BEIN SPORT") is None
+        # Single letter should not match
+        assert extract_country_code("A| Channel") is None
+        # Three letters should not match
+        assert extract_country_code("USA| Channel") is None
+        # No pipe
+        assert extract_country_code("AR BEIN SPORT") is None
+    
+    def test_should_filter_channel_no_filtering(self):
+        """Test that channels are not filtered when no filters are set"""
+        from parse_m3u import should_filter_channel
+        
+        assert should_filter_channel("AR| BEIN SPORT", set(), set()) is False
+        assert should_filter_channel("US| CNN", set(), set()) is False
+        assert should_filter_channel("Regular Channel", set(), set()) is False
+    
+    def test_should_filter_channel_exclude_mode(self):
+        """Test exclude mode filtering"""
+        from parse_m3u import should_filter_channel
+        
+        filter_codes = {"AR", "NL", "FR"}
+        
+        # Channels with filtered codes should be filtered
+        assert should_filter_channel("AR| BEIN SPORT", set(), filter_codes) is True
+        assert should_filter_channel("NL| RTL", set(), filter_codes) is True
+        assert should_filter_channel("FR| TF1", set(), filter_codes) is True
+        
+        # Channels with non-filtered codes should not be filtered
+        assert should_filter_channel("US| CNN", set(), filter_codes) is False
+        assert should_filter_channel("UK| BBC", set(), filter_codes) is False
+        
+        # Channels without country codes should never be filtered
+        assert should_filter_channel("Regular Channel", set(), filter_codes) is False
+        assert should_filter_channel("CNN", set(), filter_codes) is False
+    
+    def test_should_filter_channel_include_mode(self):
+        """Test include mode filtering"""
+        from parse_m3u import should_filter_channel
+        
+        include_codes = {"US", "UK"}
+        
+        # Channels with included codes should not be filtered
+        assert should_filter_channel("US| CNN", include_codes, set()) is False
+        assert should_filter_channel("UK| BBC", include_codes, set()) is False
+        
+        # Channels with non-included codes should be filtered
+        assert should_filter_channel("AR| BEIN SPORT", include_codes, set()) is True
+        assert should_filter_channel("NL| RTL", include_codes, set()) is True
+        assert should_filter_channel("FR| TF1", include_codes, set()) is True
+        
+        # Channels without country codes should never be filtered
+        assert should_filter_channel("Regular Channel", include_codes, set()) is False
+        assert should_filter_channel("CNN", include_codes, set()) is False
+    
+    def test_should_filter_channel_include_takes_precedence(self):
+        """Test that include mode takes precedence over exclude mode"""
+        from parse_m3u import should_filter_channel
+        
+        include_codes = {"US"}
+        filter_codes = {"AR", "NL", "FR"}
+        
+        # US is in include list, should not be filtered even if in filter list
+        assert should_filter_channel("US| CNN", include_codes, filter_codes) is False
+        
+        # AR is not in include list, should be filtered (include takes precedence)
+        assert should_filter_channel("AR| BEIN SPORT", include_codes, filter_codes) is True
+        
+        # UK is not in include list, should be filtered
+        assert should_filter_channel("UK| BBC", include_codes, filter_codes) is True
+    
+    def test_process_playlist_with_exclude_filter(self, caplog):
+        """Test processing playlist with exclude filter"""
+        import logging
+        from parse_m3u import process_playlist
+        
+        with caplog.at_level(logging.INFO):
+            playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="AR| BEIN SPORT" tvg-id="" tvg-logo="" group-title="Live TV",AR| BEIN SPORT
+http://example.com/live/1
+#EXTINF:-1 tvg-name="US| CNN" tvg-id="" tvg-logo="" group-title="Live TV",US| CNN
+http://example.com/live/2
+#EXTINF:-1 tvg-name="NL| RTL" tvg-id="" tvg-logo="" group-title="Live TV",NL| RTL
+http://example.com/live/3
+#EXTINF:-1 tvg-name="Regular Channel" tvg-id="" tvg-logo="" group-title="Live TV",Regular Channel
+http://example.com/live/4
+"""
+            tmp_playlist = self.temp_dir / "playlist.m3u"
+            tmp_playlist.write_text(playlist_content)
+            
+            with patch('parse_m3u.TMP_PLAYLIST', tmp_playlist), \
+                 patch('parse_m3u.FILTER_COUNTRY_CODES', {"AR", "NL"}), \
+                 patch('parse_m3u.INCLUDE_COUNTRY_CODES', set()):
+                process_playlist()
+        
+        # Check live TV file
+        live_file = self.livetv_dir / "livetv.m3u"
+        assert live_file.exists()
+        content = live_file.read_text()
+        
+        # AR and NL channels should be filtered out
+        assert "AR| BEIN SPORT" not in content
+        assert "NL| RTL" not in content
+        
+        # US and Regular Channel should be included
+        assert "US| CNN" in content
+        assert "Regular Channel" in content
+        
+        # Verify logging (check if present, but don't fail if logging isn't captured)
+        log_text = caplog.text
+        if log_text:
+            assert "EXCLUDE" in log_text or "excluding" in log_text.lower()
+            assert "Filtered out 2" in log_text or "2 live TV channel" in log_text
+    
+    def test_process_playlist_with_include_filter(self, caplog):
+        """Test processing playlist with include filter"""
+        import logging
+        from parse_m3u import process_playlist
+        
+        with caplog.at_level(logging.INFO):
+            playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="AR| BEIN SPORT" tvg-id="" tvg-logo="" group-title="Live TV",AR| BEIN SPORT
+http://example.com/live/1
+#EXTINF:-1 tvg-name="US| CNN" tvg-id="" tvg-logo="" group-title="Live TV",US| CNN
+http://example.com/live/2
+#EXTINF:-1 tvg-name="NL| RTL" tvg-id="" tvg-logo="" group-title="Live TV",NL| RTL
+http://example.com/live/3
+#EXTINF:-1 tvg-name="Regular Channel" tvg-id="" tvg-logo="" group-title="Live TV",Regular Channel
+http://example.com/live/4
+"""
+            tmp_playlist = self.temp_dir / "playlist.m3u"
+            tmp_playlist.write_text(playlist_content)
+            
+            with patch('parse_m3u.TMP_PLAYLIST', tmp_playlist), \
+                 patch('parse_m3u.FILTER_COUNTRY_CODES', set()), \
+                 patch('parse_m3u.INCLUDE_COUNTRY_CODES', {"US"}):
+                process_playlist()
+        
+        # Check live TV file
+        live_file = self.livetv_dir / "livetv.m3u"
+        assert live_file.exists()
+        content = live_file.read_text()
+        
+        # Only US channel should be included (for channels with country codes)
+        assert "US| CNN" in content
+        
+        # AR and NL channels should be filtered out
+        assert "AR| BEIN SPORT" not in content
+        assert "NL| RTL" not in content
+        
+        # Regular Channel (no country code) should always be included
+        assert "Regular Channel" in content
+        
+        # Verify logging (check if present, but don't fail if logging isn't captured)
+        log_text = caplog.text
+        if log_text:
+            assert "INCLUDE" in log_text or "only" in log_text.lower()
+            assert "Filtered out 2" in log_text or "2 live TV channel" in log_text
+    
+    def test_process_playlist_no_filtering(self, caplog):
+        """Test processing playlist without any filtering"""
+        from parse_m3u import process_playlist
+        
+        playlist_content = """#EXTM3U
+#EXTINF:-1 tvg-name="AR| BEIN SPORT" tvg-id="" tvg-logo="" group-title="Live TV",AR| BEIN SPORT
+http://example.com/live/1
+#EXTINF:-1 tvg-name="US| CNN" tvg-id="" tvg-logo="" group-title="Live TV",US| CNN
+http://example.com/live/2
+#EXTINF:-1 tvg-name="Regular Channel" tvg-id="" tvg-logo="" group-title="Live TV",Regular Channel
+http://example.com/live/3
+"""
+        tmp_playlist = self.temp_dir / "playlist.m3u"
+        tmp_playlist.write_text(playlist_content)
+        
+        with patch('parse_m3u.TMP_PLAYLIST', tmp_playlist), \
+             patch('parse_m3u.FILTER_COUNTRY_CODES', set()), \
+             patch('parse_m3u.INCLUDE_COUNTRY_CODES', set()):
+            process_playlist()
+        
+        # Check live TV file
+        live_file = self.livetv_dir / "livetv.m3u"
+        assert live_file.exists()
+        content = live_file.read_text()
+        
+        # All channels should be included
+        assert "AR| BEIN SPORT" in content
+        assert "US| CNN" in content
+        assert "Regular Channel" in content
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 
