@@ -570,6 +570,13 @@ def process_playlist():
         logger.warning("⚠️ Playlist contains no valid items (0 movies, 0 series, 0 live TV)")
         logger.warning("⚠️ Skipping orphan cleanup to prevent accidental mass deletion")
         logger.warning("⚠️ This may indicate a download failure or invalid playlist file")
+        # Delete the invalid playlist file so it gets redownloaded next run
+        if TMP_PLAYLIST.exists():
+            try:
+                TMP_PLAYLIST.unlink()
+                logger.info(f"🗑 Deleted invalid playlist file {TMP_PLAYLIST} (will be redownloaded next run)")
+            except Exception as e:
+                logger.warning(f"⚠️ Error deleting invalid playlist file {TMP_PLAYLIST}: {e}")
         return
 
     # Track all processed files for orphan cleanup
