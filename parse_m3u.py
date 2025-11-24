@@ -110,13 +110,14 @@ def parse_movie_name(tvg_name: str):
     return safe_filename(tvg_name)
 
 def parse_series_name(tvg_name: str):
-    # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", etc.
+    # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", "SHWT - ", etc.
     tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
     # Extract year (can appear before or after season/episode)
     year_match = re.search(r'\((\d{4})\)', tvg_name)
     year = year_match.group(0) if year_match else ''
-    # Remove season/episode from name first (handles "S01 E02", "S01E02", ".S01E06", etc.)
-    tvg_name = re.sub(r'[.\s]+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name, flags=re.IGNORECASE).strip()
+    # Remove season/episode from name first (handles "S01 E02", "S01E02", ".S01E06", " - S01E02 - Episode Title", etc.)
+    # Updated regex to handle dashes and episode titles after season/episode
+    tvg_name = re.sub(r'[\s\-\.]+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name, flags=re.IGNORECASE).strip()
     # Remove all parentheses content (including year, country codes like "(US)", etc.)
     tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
     # Add year back if it was present

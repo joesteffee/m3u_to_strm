@@ -87,6 +87,11 @@ class TestFilenameParsing:
         
         # Remove other parentheses but keep year
         assert parse_series_name("EN - Series Name (Drama) (2023) S01E01") == "Series Name (2023)"
+        
+        # New format from IPTV-proxy with episode title after season/episode
+        assert parse_series_name("SHWT - Fellow Travelers (2023) (US) - S01E02 - Bulletproof") == "Fellow Travelers (2023)"
+        assert parse_series_name("SHWT - Fellow Travelers (2023) (US) - S01E03 - Hit Me") == "Fellow Travelers (2023)"
+        assert parse_series_name("PCOK - Hysteria! (2024) (US) - S01E01") == "Hysteria! (2024)"
     
     def test_extract_season_episode(self):
         """Test season and episode extraction"""
@@ -109,6 +114,15 @@ class TestFilenameParsing:
         season, episode = extract_season_episode("Series Name s01e01")
         assert season == "Season 1"
         assert episode == "S01E01"
+        
+        # New format from IPTV-proxy with episode title after season/episode
+        season, episode = extract_season_episode("SHWT - Fellow Travelers (2023) (US) - S01E02 - Bulletproof")
+        assert season == "Season 1"
+        assert episode == "S01E02"
+        
+        season, episode = extract_season_episode("SHWT - Fellow Travelers (2023) (US) - S01E03 - Hit Me")
+        assert season == "Season 1"
+        assert episode == "S01E03"
         
         # No season/episode found
         season, episode = extract_season_episode("Series Name")
