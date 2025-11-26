@@ -203,16 +203,58 @@ def write_strm_file(directory: Path, filename: str, url: str, content_id: Option
     Write a STRM file and return the filepath, whether it was newly created, and if URL changed.
     If content_id is provided and a file with the same base name but different ID exists,
     creates a new file with the ID appended to handle duplicate quality versions.
+    
+    When multiple quality versions exist, all versions use ID-based filenames to prevent
+    the base file from being replaced with different IDs on subsequent runs.
     Returns: (filepath, is_new, url_changed)
     """
     directory.mkdir(parents=True, exist_ok=True)
     
-    # Check for existing files with same base name but different IDs
     base_filepath = directory / f"{filename}.strm"
-    final_filepath = base_filepath
     
-    if content_id:
-        # Check if base file exists with different URL/ID
+    # Check if multiple versions already exist (base file + any ID files)
+    existing_strm_files = list(directory.glob(f"{filename}*.strm"))
+    has_id_files = any(f.name != f"{filename}.strm" and "[" in f.name for f in existing_strm_files)
+    has_base_file = base_filepath.exists()
+    has_multiple_versions = (has_base_file and has_id_files) or len(existing_strm_files) > 1
+    
+    # If multiple versions exist, always use ID-based filenames for all versions
+    # This prevents the base file from being replaced with different IDs on subsequent runs
+    if has_multiple_versions:
+        if content_id:
+            # Multiple versions exist - check if base file has this ID
+            # If so, we should migrate it to ID-based filename to maintain consistency
+            id_filepath = directory / f"{filename} [{content_id}].strm"
+            if base_filepath.exists() and not id_filepath.exists():
+                # Check if base file has the same ID - if so, we'll use the ID-based filename
+                # This ensures all versions use ID-based filenames when multiple exist
+                try:
+                    existing_url = base_filepath.read_text(encoding="utf-8").strip()
+                    existing_id = extract_content_id(existing_url)
+                    if existing_id == content_id:
+                        # Base file has this ID - use ID-based filename for consistency
+                        final_filepath = id_filepath
+                        logger.debug(f"Migrating base file to ID-based filename {final_filepath.name} (multiple versions exist)")
+                    else:
+                        # Base file has different ID - use ID-based filename for new version
+                        final_filepath = id_filepath
+                        logger.debug(f"Multiple versions detected: using ID-based filename {final_filepath.name}")
+                except Exception:
+                    # Error reading base file - use ID-based filename
+                    final_filepath = id_filepath
+            else:
+                # ID-based file already exists or base file doesn't exist - use ID-based filename
+                final_filepath = id_filepath
+                if id_filepath.exists():
+                    logger.debug(f"Using existing ID-based file {final_filepath.name}")
+                else:
+                    logger.debug(f"Multiple versions detected: using ID-based filename {final_filepath.name}")
+        else:
+            # Multiple versions exist but no content ID - use base file
+            # This is an edge case (shouldn't happen often)
+            final_filepath = base_filepath
+    elif content_id:
+        # No multiple versions yet - check if we need to create a new version
         if base_filepath.exists():
             try:
                 existing_url = base_filepath.read_text(encoding="utf-8").strip()
@@ -221,17 +263,22 @@ def write_strm_file(directory: Path, filename: str, url: str, content_id: Option
                 if existing_id and existing_id != content_id:
                     final_filepath = directory / f"{filename} [{content_id}].strm"
                     logger.debug(f"Duplicate version detected: creating {final_filepath.name} (existing: {existing_id}, new: {content_id})")
+                else:
+                    # Same ID or no ID in existing file - use base file
+                    final_filepath = base_filepath
             except Exception:
-                pass
+                # Error reading existing file - use base file
+                final_filepath = base_filepath
         else:
             # Check if a file with this ID already exists
             id_filepath = directory / f"{filename} [{content_id}].strm"
             if id_filepath.exists():
                 final_filepath = id_filepath
             else:
-                # Use base filename for first version
+                # Use base filename for first version (no duplicates yet)
                 final_filepath = base_filepath
     else:
+        # No content ID - always use base filename
         final_filepath = base_filepath
     
     is_new = not final_filepath.exists()
@@ -606,17 +653,16 @@ def process_playlist():
         content_id = extract_content_id(url)
         
         # Check for existing files (base name or with ID)
-        base_filepath = MOVIES_DIR / folder_name / f"{folder_name}.strm"
-        possible_filepaths = [base_filepath]
-        if content_id:
-            id_filepath = MOVIES_DIR / folder_name / f"{folder_name} [{content_id}].strm"
-            possible_filepaths.append(id_filepath)
+        # When multiple versions exist, check all .strm files in the directory
+        # to avoid processing items that already exist in any file
+        movie_dir = MOVIES_DIR / folder_name
+        base_filepath = movie_dir / f"{folder_name}.strm"
         
-        # Check if file exists and hasn't changed (skip unchanged items, don't count towards limit)
+        # Check all existing .strm files in the directory to see if URL already exists
         is_unchanged = False
         existing_filepath = None
-        for filepath in possible_filepaths:
-            if filepath.exists():
+        if movie_dir.exists():
+            for filepath in movie_dir.glob("*.strm"):
                 try:
                     existing_url = filepath.read_text(encoding="utf-8").strip()
                     if existing_url == url:
@@ -676,17 +722,16 @@ def process_playlist():
         content_id = extract_content_id(url)
         
         # Check for existing files (base name or with ID)
-        base_filepath = SERIES_DIR / folder_name / season / f"{episode}.strm"
-        possible_filepaths = [base_filepath]
-        if content_id:
-            id_filepath = SERIES_DIR / folder_name / season / f"{episode} [{content_id}].strm"
-            possible_filepaths.append(id_filepath)
+        # When multiple versions exist, check all .strm files in the directory
+        # to avoid processing items that already exist in any file
+        episode_dir = SERIES_DIR / folder_name / season
+        base_filepath = episode_dir / f"{episode}.strm"
         
-        # Check if file exists and hasn't changed (skip unchanged items, don't count towards limit)
+        # Check all existing .strm files in the directory to see if URL already exists
         is_unchanged = False
         existing_filepath = None
-        for filepath in possible_filepaths:
-            if filepath.exists():
+        if episode_dir.exists():
+            for filepath in episode_dir.glob("*.strm"):
                 try:
                     existing_url = filepath.read_text(encoding="utf-8").strip()
                     if existing_url == url:
