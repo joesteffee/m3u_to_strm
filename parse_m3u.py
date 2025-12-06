@@ -113,19 +113,28 @@ def parse_series_name(tvg_name: str):
     # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", "SHWT - ", etc.
     tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
     
-    # Detect and handle duplicate show names (e.g., "Show (2014-2020) - EN - Show (2014) - S01E01")
-    # Pattern: show name with parentheses (year range or other info), then language prefix, then show name with single year
-    # We want to extract just the show name with the single year (not the year range)
-    # The pattern matches: "Show Name (anything) - LANG - Show Name (YYYY) - ..."
-    duplicate_pattern = r'^(.+?)\s*\([^)]*\)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)\s*\((\d{4})\)'
-    duplicate_match = re.match(duplicate_pattern, tvg_name)
-    if duplicate_match:
+    # Detect and handle duplicate show names with two patterns:
+    # Pattern 1: "Show (year-range) - LANG - Show (year) - S01E01" or "Show (year) - LANG - Show (year) - S01E01"
+    # Pattern 2: "Show (year) - LANG - Show - S01E01" (second occurrence has no year)
+    duplicate_pattern1 = r'^(.+?)\s*\([^)]*\)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)\s*\((\d{4})\)'
+    duplicate_match1 = re.match(duplicate_pattern1, tvg_name)
+    if duplicate_match1:
         # Extract the second occurrence (after the language prefix) which has the single year
-        show_name = duplicate_match.group(2).strip()
-        year = duplicate_match.group(3)
+        show_name = duplicate_match1.group(2).strip()
+        year = duplicate_match1.group(3)
         tvg_name = f"{show_name} ({year})"
         # Remove season/episode and any episode title if present
         tvg_name = re.sub(r'[\s\-\.]+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name, flags=re.IGNORECASE).strip()
+        return safe_filename(tvg_name)
+    
+    # Pattern 2: "Show (year) - LANG - Show - S01E01" (second occurrence has no year, use year from first)
+    duplicate_pattern2 = r'^(.+?)\s*\((\d{4})\)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)(?:\s*-\s*S\d{1,2}\s*E\d{1,2}|$)'
+    duplicate_match2 = re.match(duplicate_pattern2, tvg_name)
+    if duplicate_match2:
+        # Extract the second occurrence (after the language prefix) and use year from first occurrence
+        show_name = duplicate_match2.group(3).strip()
+        year = duplicate_match2.group(2)
+        tvg_name = f"{show_name} ({year})"
         return safe_filename(tvg_name)
     
     # Extract year (can appear before or after season/episode)
