@@ -92,8 +92,18 @@ def parse_movie_name(tvg_name: str):
     # Extract year (can be anywhere, but typically after title)
     year_match = re.search(r'\((\d{4})\)', tvg_name)
     year = year_match.group(0) if year_match else ''
-    # Remove all parentheses content (including year and other info)
-    tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
+    
+    # If year is found, remove everything after it (including any text after the closing parenthesis)
+    if year_match:
+        # Find the position where the year ends (after the closing parenthesis)
+        year_end_pos = year_match.end()
+        # Keep only the text up to and including the year, then strip
+        tvg_name = tvg_name[:year_end_pos].strip()
+        # Remove the year temporarily to clean up the title
+        tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
+    else:
+        # No year found, remove all parentheses content
+        tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
     
     # Remove actor names in all caps at the end (before year was removed)
     # Only remove if there's mixed-case content before it (indicating it's an actor name, not the title)
