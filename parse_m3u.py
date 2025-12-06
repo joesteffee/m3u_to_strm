@@ -112,6 +112,22 @@ def parse_movie_name(tvg_name: str):
 def parse_series_name(tvg_name: str):
     # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", "SHWT - ", etc.
     tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
+    
+    # Detect and handle duplicate show names (e.g., "Show (2014-2020) - EN - Show (2014) - S01E01")
+    # Pattern: show name with parentheses (year range or other info), then language prefix, then show name with single year
+    # We want to extract just the show name with the single year (not the year range)
+    # The pattern matches: "Show Name (anything) - LANG - Show Name (YYYY) - ..."
+    duplicate_pattern = r'^(.+?)\s*\([^)]*\)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)\s*\((\d{4})\)'
+    duplicate_match = re.match(duplicate_pattern, tvg_name)
+    if duplicate_match:
+        # Extract the second occurrence (after the language prefix) which has the single year
+        show_name = duplicate_match.group(2).strip()
+        year = duplicate_match.group(3)
+        tvg_name = f"{show_name} ({year})"
+        # Remove season/episode and any episode title if present
+        tvg_name = re.sub(r'[\s\-\.]+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name, flags=re.IGNORECASE).strip()
+        return safe_filename(tvg_name)
+    
     # Extract year (can appear before or after season/episode)
     year_match = re.search(r'\((\d{4})\)', tvg_name)
     year = year_match.group(0) if year_match else ''
