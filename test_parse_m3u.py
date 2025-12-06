@@ -95,6 +95,9 @@ class TestFilenameParsing:
         
         # Handle duplicate show names (e.g., "Show (2014-2020) - EN - Show (2014) - S01E01")
         assert parse_series_name("EN - Mike Tyson Mysteries (2014-2020) - EN - Mike Tyson Mysteries (2014) - S02E19 - The Farmer's Daughter (1)") == "Mike Tyson Mysteries (2014)"
+        
+        # Handle duplicate show names where second occurrence has no year (e.g., "Show (2020) - D+ - Show - S01E01")
+        assert parse_series_name("D+ - Diary Of A Future President (2020) - D+ - Diary of a Future President - S01E01") == "Diary of a Future President (2020)"
     
     def test_extract_season_episode(self):
         """Test season and episode extraction"""
