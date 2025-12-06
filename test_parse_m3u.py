@@ -101,6 +101,14 @@ class TestFilenameParsing:
         
         # Handle duplicate show names with no years at all (e.g., "Show - LANG - Show - S01E01")
         assert parse_series_name("NF - Accidentally In Love - MU - Accidentally In Love - S01E01") == "Accidentally In Love"
+        
+        # Edge cases: malformed entries without second show name should fall through to normal parsing
+        # Pattern 2 should not match if second occurrence is just season/episode
+        result = parse_series_name("Show (2020) - EN - S01E01")
+        assert "S01E01" not in result or result != "S01E01 (2020)", f"Pattern 2 incorrectly matched: {result}"
+        # Pattern 3 should not match if second occurrence is just season/episode
+        result = parse_series_name("Show - EN - S01E01")
+        assert result != "S01E01", f"Pattern 3 incorrectly matched: {result}"
     
     def test_extract_season_episode(self):
         """Test season and episode extraction"""
