@@ -92,6 +92,9 @@ class TestFilenameParsing:
         assert parse_series_name("SHWT - Fellow Travelers (2023) (US) - S01E02 - Bulletproof") == "Fellow Travelers (2023)"
         assert parse_series_name("SHWT - Fellow Travelers (2023) (US) - S01E03 - Hit Me") == "Fellow Travelers (2023)"
         assert parse_series_name("PCOK - Hysteria! (2024) (US) - S01E01") == "Hysteria! (2024)"
+        
+        # Handle duplicate show names (e.g., "Show (2014-2020) - EN - Show (2014) - S01E01")
+        assert parse_series_name("EN - Mike Tyson Mysteries (2014-2020) - EN - Mike Tyson Mysteries (2014) - S02E19 - The Farmer's Daughter (1)") == "Mike Tyson Mysteries (2014)"
     
     def test_extract_season_episode(self):
         """Test season and episode extraction"""
