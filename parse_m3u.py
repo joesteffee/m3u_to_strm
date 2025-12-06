@@ -5,6 +5,7 @@ import sys
 import time
 import logging
 import requests
+import shutil
 from pathlib import Path
 from typing import Tuple, Optional, Set
 from datetime import datetime, timedelta
@@ -539,9 +540,8 @@ def cleanup_empty_dirs(base_dir: Path):
     for d in base_dir.iterdir():
         if d.is_dir() and not any(f.suffix == ".strm" for f in d.rglob("*")):
             logger.info(f"🗑 Removing empty or orphaned directory: {d}")
-            for f in d.rglob("*"):
-                f.unlink()
-            d.rmdir()
+            # Use shutil.rmtree to safely remove directory and all its contents recursively
+            shutil.rmtree(d)
 
 def find_all_strm_files(base_dir: Path) -> Set[Path]:
     """Find all existing STRM files in a directory."""
