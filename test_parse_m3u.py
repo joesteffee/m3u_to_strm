@@ -69,6 +69,10 @@ class TestFilenameParsing:
         assert parse_movie_name("JACK RYAN (2018)") == "JACK RYAN (2018)"  # Title itself is all caps
         # Don't remove single capital letters or short words
         assert parse_movie_name("Movie A (2023)") == "Movie A (2023)"
+        
+        # Remove any text after the year (not just all-caps actor names)
+        assert parse_movie_name("EN - Chicken Run (2000) Aardman") == "Chicken Run (2000)"
+        assert parse_movie_name("EN - Movie Name (2023) Extra Text Here") == "Movie Name (2023)"
     
     def test_parse_series_name(self):
         """Test series name parsing"""
