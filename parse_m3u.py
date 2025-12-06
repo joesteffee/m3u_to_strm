@@ -113,9 +113,10 @@ def parse_series_name(tvg_name: str):
     # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", "SHWT - ", etc.
     tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
     
-    # Detect and handle duplicate show names with two patterns:
+    # Detect and handle duplicate show names with three patterns:
     # Pattern 1: "Show (year-range) - LANG - Show (year) - S01E01" or "Show (year) - LANG - Show (year) - S01E01"
     # Pattern 2: "Show (year) - LANG - Show - S01E01" (second occurrence has no year)
+    # Pattern 3: "Show - LANG - Show - S01E01" (no years at all)
     duplicate_pattern1 = r'^(.+?)\s*\([^)]*\)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)\s*\((\d{4})\)'
     duplicate_match1 = re.match(duplicate_pattern1, tvg_name)
     if duplicate_match1:
@@ -136,6 +137,18 @@ def parse_series_name(tvg_name: str):
         year = duplicate_match2.group(2)
         tvg_name = f"{show_name} ({year})"
         return safe_filename(tvg_name)
+    
+    # Pattern 3: "Show - LANG - Show - S01E01" (no years at all, extract second occurrence)
+    # Only match if there are no year patterns (4 digits in parentheses) in the string
+    if not re.search(r'\(\d{4}\)', tvg_name):
+        duplicate_pattern3 = r'^(.+?)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)(?:\s*-\s*S\d{1,2}\s*E\d{1,2}|$)'
+        duplicate_match3 = re.match(duplicate_pattern3, tvg_name)
+        if duplicate_match3:
+            # Extract the second occurrence (after the language prefix)
+            show_name = duplicate_match3.group(2).strip()
+            # Remove season/episode if present
+            show_name = re.sub(r'[\s\-\.]+S\d{1,2}\s*E\d{1,2}.*$', '', show_name, flags=re.IGNORECASE).strip()
+            return safe_filename(show_name)
     
     # Extract year (can appear before or after season/episode)
     year_match = re.search(r'\((\d{4})\)', tvg_name)

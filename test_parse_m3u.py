@@ -98,6 +98,9 @@ class TestFilenameParsing:
         
         # Handle duplicate show names where second occurrence has no year (e.g., "Show (2020) - D+ - Show - S01E01")
         assert parse_series_name("D+ - Diary Of A Future President (2020) - D+ - Diary of a Future President - S01E01") == "Diary of a Future President (2020)"
+        
+        # Handle duplicate show names with no years at all (e.g., "Show - LANG - Show - S01E01")
+        assert parse_series_name("NF - Accidentally In Love - MU - Accidentally In Love - S01E01") == "Accidentally In Love"
     
     def test_extract_season_episode(self):
         """Test season and episode extraction"""
