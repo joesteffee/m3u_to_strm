@@ -73,6 +73,29 @@ class TestFilenameParsing:
         # Remove any text after the year (not just all-caps actor names)
         assert parse_movie_name("EN - Chicken Run (2000) Aardman") == "Chicken Run (2000)"
         assert parse_movie_name("EN - Movie Name (2023) Extra Text Here") == "Movie Name (2023)"
+        
+        # Handle duplicate titles with service identifier in middle
+        assert parse_movie_name("Disney Insider - D+ - Disney Insider") == "Disney Insider"
+        assert parse_movie_name("Mighty Express - NF - Mighty Express") == "Mighty Express"
+        assert parse_movie_name("D+ - Disney Insider - D+ - Disney Insider") == "Disney Insider"
+        assert parse_movie_name("NF - Mighty Express - NF - Mighty Express") == "Mighty Express"
+        
+        # Remove leading number prefixes
+        assert parse_movie_name("01-Road To Singapore") == "Road To Singapore"
+        assert parse_movie_name("02 Le Gendarme A New York, The Gendarme In New York") == "Le Gendarme A New York"
+        assert parse_movie_name("001 - Movie Title") == "Movie Title"
+        assert parse_movie_name("123. Another Movie") == "Another Movie"
+        assert parse_movie_name("02-A Shot In The Dark") == "A Shot In The Dark"
+        assert parse_movie_name("02-Road To Zanzibar") == "Road To Zanzibar"
+        assert parse_movie_name("05 Le Gendarme Et Les Extra-Terrestres, The Gendarme And The Extra-Terrestrials") == "Le Gendarme Et Les Extra-Terrestres"
+        assert parse_movie_name("06 EN - Friday The 13th Part VI Jason Lives") == "Friday The 13th Part VI Jason Lives"
+        assert parse_movie_name("12 EN - Friday The 13th") == "Friday The 13th"
+        
+        # Handle comma-separated duplicate titles
+        assert parse_movie_name("French Title, English Title") == "French Title"
+        assert parse_movie_name("Title One, Title Two (2023)") == "Title One (2023)"
+        # Don't split on commas inside parentheses
+        assert parse_movie_name("Movie (Action, Drama) (2023)") == "Movie (2023)"
     
     def test_parse_series_name(self):
         """Test series name parsing"""
@@ -105,6 +128,22 @@ class TestFilenameParsing:
         
         # Handle duplicate show names with no years at all (e.g., "Show - LANG - Show - S01E01")
         assert parse_series_name("NF - Accidentally In Love - MU - Accidentally In Love - S01E01") == "Accidentally In Love"
+        
+        # Handle simple duplicate titles with service identifier in middle
+        assert parse_series_name("Disney Insider - D+ - Disney Insider") == "Disney Insider"
+        assert parse_series_name("Mighty Express - NF - Mighty Express") == "Mighty Express"
+        assert parse_series_name("D+ - Disney Insider - D+ - Disney Insider") == "Disney Insider"
+        assert parse_series_name("NF - Mighty Express - NF - Mighty Express") == "Mighty Express"
+        assert parse_series_name("Disney Insider - D+ - Disney Insider - S01E01") == "Disney Insider"
+        assert parse_series_name("Mighty Express - NF - Mighty Express - S01E01") == "Mighty Express"
+        # Handle case differences in duplicate titles
+        assert parse_series_name("Alice In Borderland - NF - Alice in Borderland") == "Alice In Borderland"
+        assert parse_series_name("Alice In Borderland - NF - Alice in Borderland - S01E01") == "Alice In Borderland"
+        # Handle exact duplicate titles
+        assert parse_series_name("Baby Bandito - NF - Baby Bandito") == "Baby Bandito"
+        assert parse_series_name("Baby Bandito - NF - Baby Bandito - S01E01") == "Baby Bandito"
+        assert parse_series_name("Blood Coast - NF - Blood Coast") == "Blood Coast"
+        assert parse_series_name("Blood Coast - NF - Blood Coast - S01E01") == "Blood Coast"
         
         # Edge cases: malformed entries without second show name should fall through to normal parsing
         # Pattern 2 should not match if second occurrence is just season/episode
