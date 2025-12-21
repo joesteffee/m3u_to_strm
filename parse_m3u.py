@@ -88,11 +88,71 @@ def safe_filename(name: str) -> str:
     return re.sub(r'[\\/:"*?<>|#]+', '', name).strip()
 
 def parse_movie_name(tvg_name: str):
-    # Remove language prefix like "EN - ", "NF - ", "D+ - ", etc.
+    # Remove leading number prefixes (e.g., "01-", "02 ", "001-", "06 EN - ", etc.)
+    # This handles both standalone numbers and numbers followed by language prefixes
+    tvg_name = re.sub(r'^\d+\s*(?:[-.]?\s*)?(?:[A-Z0-9+]{1,4}\s*-\s*)?', '', tvg_name).strip()
+    
+    # Remove language prefix like "EN - ", "NF - ", "D+ - ", etc. (in case it wasn't removed above)
     tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
-    # Extract year (can be anywhere, but typically after title)
+    
+    # Extract year first (before comma splitting, so we don't lose it)
     year_match = re.search(r'\((\d{4})\)', tvg_name)
     year = year_match.group(0) if year_match else ''
+    
+    # Handle comma-separated duplicate titles (e.g., "French Title, English Title")
+    # Keep only the first title before the comma
+    # Only split if the part after comma looks like another title (not just a year or actor name)
+    if ',' in tvg_name:
+        # Split by comma and take the first part
+        # But be careful not to split on commas inside parentheses
+        parts = []
+        depth = 0
+        current = ""
+        for char in tvg_name:
+            if char == '(':
+                depth += 1
+                current += char
+            elif char == ')':
+                depth -= 1
+                current += char
+            elif char == ',' and depth == 0:
+                parts.append(current.strip())
+                current = ""
+            else:
+                current += char
+        if current:
+            parts.append(current.strip())
+        
+        # If we have multiple parts, check if the second part looks like a title
+        # (not just a year in parentheses or an actor name)
+        if len(parts) > 1:
+            second_part = parts[1].strip()
+            # Don't split if second part is just a year in parentheses
+            if not re.match(r'^\s*\(\d{4}\)\s*$', second_part):
+                # Don't split if second part is just all caps (likely actor name)
+                # or if it's very short (less than 5 chars, likely not a title)
+                if len(second_part) >= 5 and not re.match(r'^[A-Z\s,]+$', second_part):
+                    tvg_name = parts[0].strip()
+                elif len(second_part) >= 10:  # If it's long enough, treat as title
+                    tvg_name = parts[0].strip()
+    
+    # Detect and handle duplicate titles with service identifier in middle
+    # Pattern: "Title - SERVICE - Title" (e.g., "Disney Insider - D+ - Disney Insider")
+    # Match title, service identifier (1-4 chars), and same title again (case-insensitive)
+    # Use a pattern that captures both titles separately, then compare case-insensitively
+    duplicate_pattern = r'^(.+?)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)(?:\s*\([^)]*\))?\s*$'
+    duplicate_match = re.match(duplicate_pattern, tvg_name, re.IGNORECASE)
+    if duplicate_match:
+        first_title = duplicate_match.group(1).strip()
+        second_title = duplicate_match.group(2).strip()
+        # Compare case-insensitively to detect duplicates
+        if first_title.lower() == second_title.lower():
+            # Extract just the first title (preserve original case)
+            tvg_name = first_title
+    
+    # Re-search for year after all modifications (position may have changed)
+    year_match = re.search(r'\((\d{4})\)', tvg_name)
+    year = year_match.group(0) if year_match else year  # Keep original year if not found in modified string
     
     # If year is found, remove everything after it (including any text after the closing parenthesis)
     if year_match:
@@ -121,8 +181,73 @@ def parse_movie_name(tvg_name: str):
     return safe_filename(tvg_name)
 
 def parse_series_name(tvg_name: str):
-    # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", "SHWT - ", etc.
+    # Remove leading number prefixes (e.g., "01-", "02 ", "001-", "06 EN - ", etc.)
+    # This handles both standalone numbers and numbers followed by language prefixes
+    tvg_name = re.sub(r'^\d+\s*(?:[-.]?\s*)?(?:[A-Z0-9+]{1,4}\s*-\s*)?', '', tvg_name).strip()
+    
+    # Remove language prefix like "EN - ", "NF - ", "D+ - ", "SPT - ", "SHWT - ", etc. (in case it wasn't removed above)
     tvg_name = re.sub(r'^[A-Z0-9+]{1,4}\s*-\s*', '', tvg_name).strip()
+    
+    # Handle comma-separated duplicate titles (e.g., "French Title, English Title")
+    # Keep only the first title before the comma
+    # Only split if the part after comma looks like another title (not just a year or actor name)
+    if ',' in tvg_name:
+        # Split by comma and take the first part
+        # But be careful not to split on commas inside parentheses
+        parts = []
+        depth = 0
+        current = ""
+        for char in tvg_name:
+            if char == '(':
+                depth += 1
+                current += char
+            elif char == ')':
+                depth -= 1
+                current += char
+            elif char == ',' and depth == 0:
+                parts.append(current.strip())
+                current = ""
+            else:
+                current += char
+        if current:
+            parts.append(current.strip())
+        
+        # If we have multiple parts, check if the second part looks like a title
+        # (not just a year in parentheses or an actor name)
+        if len(parts) > 1:
+            second_part = parts[1].strip()
+            # Don't split if second part is just a year in parentheses
+            if not re.match(r'^\s*\(\d{4}\)\s*$', second_part):
+                # Don't split if second part is just all caps (likely actor name)
+                # or if it's very short (less than 5 chars, likely not a title)
+                if len(second_part) >= 5 and not re.match(r'^[A-Z\s,]+$', second_part):
+                    tvg_name = parts[0].strip()
+                elif len(second_part) >= 10:  # If it's long enough, treat as title
+                    tvg_name = parts[0].strip()
+    
+    # Detect and handle simple duplicate titles with service identifier in middle
+    # Pattern: "Title - SERVICE - Title" (e.g., "Mighty Express - NF - Mighty Express")
+    # Match title, service identifier (1-4 chars), and same title again (case-insensitive)
+    # This should be checked before the more complex duplicate patterns
+    # Use a pattern that captures both titles separately, then compare case-insensitively
+    simple_duplicate_pattern = r'^(.+?)\s*-\s*[A-Z0-9+]{1,4}\s*-\s*(.+?)(?:\s*\([^)]*\))?(?:\s*-\s*S\d{1,2}\s*E\d{1,2})?\s*$'
+    simple_duplicate_match = re.match(simple_duplicate_pattern, tvg_name, re.IGNORECASE)
+    if simple_duplicate_match:
+        first_title = simple_duplicate_match.group(1).strip()
+        second_title = simple_duplicate_match.group(2).strip()
+        # Compare case-insensitively to detect duplicates
+        if first_title.lower() == second_title.lower():
+            # Extract just the first title (preserve original case)
+            tvg_name = first_title
+            # Remove season/episode if present
+            tvg_name = re.sub(r'[\s\-\.]+S\d{1,2}\s*E\d{1,2}.*$', '', tvg_name, flags=re.IGNORECASE).strip()
+            # Extract and preserve year if present
+            year_match = re.search(r'\((\d{4})\)', tvg_name)
+            year = year_match.group(0) if year_match else ''
+            if year_match:
+                tvg_name = re.sub(r'\s*\([^()]*\)', '', tvg_name).strip()
+                tvg_name += f" {year}"
+            return safe_filename(tvg_name)
     
     # Detect and handle duplicate show names with three patterns:
     # Pattern 1: "Show (year-range) - LANG - Show (year) - S01E01" or "Show (year) - LANG - Show (year) - S01E01"
