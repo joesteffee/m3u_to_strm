@@ -1,2 +1,3 @@
-build.sh
-
+/target
+/build.sh
+__pycache__/
