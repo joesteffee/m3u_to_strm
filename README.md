@@ -92,6 +92,27 @@ To build the image locally instead:
 docker build -t ghcr.io/joesteffee/m3u_to_strm:local .
 ```
 
+### Troubleshooting
+
+**`ERROR - ❌ Error: permission denied (os error 13)`** — the container writes as UID 99 / GID 100, so
+the three mounted directories have to be writable by that user:
+
+```bash
+sudo chown -R 99:100 /path/to/movies /path/to/series /path/to/livetv
+```
+
+On a host with SELinux enforcing (Fedora, RHEL, Rocky) a bind mount also needs a label, otherwise the
+write is refused even when the ownership is right. Add `:z` to every mount:
+
+```bash
+-v /path/to/movies:/usr/src/app/movies:z
+```
+
+unRAID does not use SELinux, so `:z` is not needed there.
+
+**The playlist looks stale** — it is cached at `/tmp/playlist.m3u` inside the container for
+`M3U_CACHE_HOURS` (default 8) hours. Delete that file, or lower the cache time, to force a download.
+
 ### unRAID
 
 1. Copy the template below to `/boot/config/plugins/dockerMan/templates-user/my-m3u-to-strm.xml`,
