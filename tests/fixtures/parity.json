@@ -1,0 +1,4211 @@
+{
+  "cases": [
+    {
+      "fn": "safe_filename",
+      "args": [
+        "a/b:c*d?e<f>g#h|i"
+      ],
+      "expect": "abcdefghi"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "  a/b:c*d?e<f>g#h|i  "
+      ],
+      "expect": "abcdefghi"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "Normal Name"
+      ],
+      "expect": "Normal Name"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        ".."
+      ],
+      "expect": ".."
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "..."
+      ],
+      "expect": "..."
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "aaa"
+      ],
+      "expect": "aaa"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "été"
+      ],
+      "expect": "été"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "日本語"
+      ],
+      "expect": "日本語"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "tab\tsep"
+      ],
+      "expect": "tab\tsep"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "line\nbreak"
+      ],
+      "expect": "line\nbreak"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "null\u0000byte"
+      ],
+      "expect": "null\u0000byte"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "emoji 😀 name"
+      ],
+      "expect": "emoji 😀 name"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "Consecutive   Spaces"
+      ],
+      "expect": "Consecutive   Spaces"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        " trailing"
+      ],
+      "expect": "trailing"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "trailing "
+      ],
+      "expect": "trailing"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "\"quoted\""
+      ],
+      "expect": "quoted"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "|pipe|"
+      ],
+      "expect": "pipe"
+    },
+    {
+      "fn": "safe_filename",
+      "args": [
+        "back\\slash"
+      ],
+      "expect": "backslash"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Blade Runner (1982)"
+      ],
+      "expect": "Blade Runner (1982)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "[CR] Blade Runner (1982)"
+      ],
+      "expect": "[CR] Blade Runner (1982)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "[FW] The Matrix (1999)"
+      ],
+      "expect": "[FW] The Matrix (1999)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "[Group Name] Some Movie (2020)"
+      ],
+      "expect": "[Group Name] Some Movie (2020)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "[] Empty Prefix (2020)"
+      ],
+      "expect": "[] Empty Prefix (2020)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "[Unbalanced Movie (2020)"
+      ],
+      "expect": "[Unbalanced Movie (2020)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Inception (2010) (1080p)"
+      ],
+      "expect": "Inception (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Inception (2010) [1080p] [_subs]"
+      ],
+      "expect": "Inception (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "The Matrix (1999), 1999"
+      ],
+      "expect": "The Matrix (1999)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Being (1998), 1998"
+      ],
+      "expect": "Being (1998)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Film, TV"
+      ],
+      "expect": "Film,"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Film, TV Show"
+      ],
+      "expect": "Film"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "A Quiet Place (A Quiet Place), 2018"
+      ],
+      "expect": "A Quiet Place, 2018"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie, The (2001)"
+      ],
+      "expect": "Movie (2001)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie, the (2001)"
+      ],
+      "expect": "Movie (2001)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie, THE (2001)"
+      ],
+      "expect": "Movie (2001)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Some Movie, Another Title (2021)"
+      ],
+      "expect": "Some Movie (2021)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie 2010"
+      ],
+      "expect": "Movie 2010"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010"
+      ],
+      "expect": "Movie (2010"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie 1999 (2010)"
+      ],
+      "expect": "Movie 1999 (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "2001 A Space Odyssey (1968)"
+      ],
+      "expect": "A Space Odyssey (1968)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "12 Years a Slave (2013)"
+      ],
+      "expect": "Years a Slave (2013)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "The.Movie.2010.1080p.WEB-DL"
+      ],
+      "expect": "The.Movie.2010.1080p.WEB-DL"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "THE MATRIX (1999)"
+      ],
+      "expect": "THE MATRIX (1999)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) HDRiTS"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) 3D SBS"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) TRUEFRENCH"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) MULTi"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) VOSTFR"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) FRENCH"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) HD"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) SD"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) HDTV"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) DVDRIP"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) OFDB"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) IMAX"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) - Extended"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) (4K) (2010)"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (19)99"
+      ],
+      "expect": "Movie99"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2100)"
+      ],
+      "expect": "Movie (2100)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (1000)"
+      ],
+      "expect": "Movie (1000)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        ""
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "   "
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "  Spaces (2000)  "
+      ],
+      "expect": "Spaces (2000)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Türkçe Film (2020) İÇİN"
+      ],
+      "expect": "Türkçe Film (2020)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "映画 (1985)"
+      ],
+      "expect": "映画 (1985)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) ("
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "(2010)"
+      ],
+      "expect": "(2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "A"
+      ],
+      "expect": "A"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "A B C D E F G H I J (2000)"
+      ],
+      "expect": "A B C D E F G H I J (2000)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Name With S01E02 Inside (2010)"
+      ],
+      "expect": "Name With S01E02 Inside (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010) S02E03"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Season 2 Episode 3 Movie (2010)"
+      ],
+      "expect": "Season 2 Episode 3 Movie (2010)"
+    },
+    {
+      "fn": "parse_movie_name",
+      "args": [
+        "Movie (2010), Extra, Data"
+      ],
+      "expect": "Movie (2010)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S01E01"
+      ],
+      "expect": "Breaking Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad - S01E01 Pilot"
+      ],
+      "expect": "Breaking Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "breaking bad s01e01"
+      ],
+      "expect": "breaking bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking.Bad.S01E01.1080p"
+      ],
+      "expect": "Breaking.Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad 1x01"
+      ],
+      "expect": "Breaking Bad 1x01"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S1E1"
+      ],
+      "expect": "Breaking Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad Season 1 Episode 1"
+      ],
+      "expect": "Breaking Bad Season 1 Episode 1"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad (2008) S01E01"
+      ],
+      "expect": "Breaking Bad (2008)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "[GRP] Breaking Bad (2008) S01E01"
+      ],
+      "expect": "[GRP] Breaking Bad (2008)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S01E01 (2008)"
+      ],
+      "expect": "Breaking Bad (2008)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S01E011"
+      ],
+      "expect": "Breaking Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S012E034"
+      ],
+      "expect": "Breaking Bad S012E034"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S01"
+      ],
+      "expect": "Breaking Bad S01"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad E01"
+      ],
+      "expect": "Breaking Bad E01"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad"
+      ],
+      "expect": "Breaking Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad (2008)"
+      ],
+      "expect": "Breaking Bad (2008)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad (2008) (2009)"
+      ],
+      "expect": "Breaking Bad (2008)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Dark S03E06 (2017)"
+      ],
+      "expect": "Dark (2017)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Dark - S03E06 - Traps and Dopplers"
+      ],
+      "expect": "Dark"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Dark S03E06 1080p WEB"
+      ],
+      "expect": "Dark"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "The Boys S04E08"
+      ],
+      "expect": "The Boys"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "The Boys, S04E08"
+      ],
+      "expect": "The Boys"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Sh?gg! Beats S01E01"
+      ],
+      "expect": "Shgg! Beats"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Тест S01E01"
+      ],
+      "expect": "Тест"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Тест (2010) S01E02 Episode Name"
+      ],
+      "expect": "Тест (2010)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Some Show S01E01 (720p)[GROUP]"
+      ],
+      "expect": "Some Show"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Show 1x1"
+      ],
+      "expect": "Show 1x1"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Show 01x01"
+      ],
+      "expect": "Show 01x01"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Show S01E01 2020"
+      ],
+      "expect": "Show"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Show (2020) 2021 S01E01"
+      ],
+      "expect": "Show 2021 (2020)"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "S01E01 Only Episodes"
+      ],
+      "expect": "S01E01 Only Episodes"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        ""
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "   "
+      ],
+      "expect": ""
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "One"
+      ],
+      "expect": "One"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "A B C D E F G"
+      ],
+      "expect": "A B C D E F G"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Season 2 Episode 3 Show"
+      ],
+      "expect": "Season 2 Episode 3 Show"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Breaking Bad S01E01 S02E02"
+      ],
+      "expect": "Breaking Bad"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "One Two Three Four Five Six S01E01"
+      ],
+      "expect": "One Two Three Four Five Six"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "One Two Three Four Five Six Seven Eight S01E01"
+      ],
+      "expect": "One Two Three Four Five Six Seven Eight"
+    },
+    {
+      "fn": "parse_series_name",
+      "args": [
+        "Show (2008) S01E01 (2008)"
+      ],
+      "expect": "Show (2008)"
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Blade Runner (1982)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "[CR] Blade Runner (1982)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "[FW] The Matrix (1999)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "[Group Name] Some Movie (2020)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "[] Empty Prefix (2020)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "[Unbalanced Movie (2020)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Inception (2010) (1080p)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Inception (2010) [1080p] [_subs]"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "The Matrix (1999), 1999"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Being (1998), 1998"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Film, TV"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Film, TV Show"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "A Quiet Place (A Quiet Place), 2018"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Movie, The (2001)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Movie, the (2001)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Movie, THE (2001)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Some Movie, Another Title (2021)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Movie 2010"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Movie (2010"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Movie 1999 (2010)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad S01E01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad - S01E01 Pilot"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "breaking bad s01e01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking.Bad.S01E01.1080p"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad 1x01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad S1E1"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad Season 1 Episode 1"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad (2008) S01E01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "[GRP] Breaking Bad (2008) S01E01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad S01E01 (2008)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad S01E011"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad S012E034"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad S01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad E01"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad (2008)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Breaking Bad (2008) (2009)"
+      ],
+      "expect": [
+        "Season 1",
+        "S01E01"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Dark S03E06 (2017)"
+      ],
+      "expect": [
+        "Season 3",
+        "S03E06"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Dark - S03E06 - Traps and Dopplers"
+      ],
+      "expect": [
+        "Season 3",
+        "S03E06"
+      ]
+    },
+    {
+      "fn": "extract_season_episode",
+      "args": [
+        "Dark S03E06 1080p WEB"
+      ],
+      "expect": [
+        "Season 3",
+        "S03E06"
+      ]
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/12345.mp4"
+      ],
+      "expect": "12345"
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/abc-def-9.mp4?v=2"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movies/99887766.mkv"
+      ],
+      "expect": "99887766"
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/1234"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/1234567890123.mp4"
+      ],
+      "expect": "1234567890123"
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/series/breaking-bad/1x01.mp4"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/abcdef.mp4"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/12ab34.mp4"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "https://a.b.c:8443/xyz/movie/55555555.ts?token=x"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/.mp4"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/movie/no_extension"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "not a url at all"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        ""
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "movie/1234567"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/path/with/movie/inside/99887766.mp4"
+      ],
+      "expect": "99887766"
+    },
+    {
+      "fn": "extract_content_id",
+      "args": [
+        "http://host/1234567/movie/7654321.mp4"
+      ],
+      "expect": "7654321"
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [720p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [SD]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [HD]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [FHD]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [4K]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK [480p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "UK: News"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News (UK)"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "News UK"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "DE Das Erste [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "es:La 1 [720p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "US|CNN [HD]"
+      ],
+      "expect": "US"
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "france 2 [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "Canal+ [4K]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "Ukraine 1 [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "no codes here"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        ""
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "IT [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "XK [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "A1 [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "1A [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "extract_country_code",
+      "args": [
+        "12 [1080p]"
+      ],
+      "expect": null
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [720p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [SD]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [HD]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [FHD]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [4K]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK [480p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "UK: News",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News (UK)",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "News UK",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "DE Das Erste [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "es:La 1 [720p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": true
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": true
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": true
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": true
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "US|CNN [HD]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": true
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "france 2 [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Canal+ [4K]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "Ukraine 1 [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "no codes here",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "IT [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "XK [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "A1 [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "1A [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [
+          "UK"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [
+          "UK",
+          "US"
+        ],
+        []
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [
+          "UK"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [],
+        [
+          "DE",
+          "UK",
+          "US"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [
+          "DE"
+        ],
+        [
+          "UK"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "should_filter_channel",
+      "args": [
+        "12 [1080p]",
+        [
+          "FR"
+        ],
+        [
+          "FR"
+        ]
+      ],
+      "expect": false
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/movies/Blade Runner (1982).strm",
+        "/mnt/media/Movies",
+        "/mnt/media/Shows",
+        "/mnt/live"
+      ],
+      "expect": "/mnt/media/Movies/Blade Runner (1982).strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/series/Breaking Bad (2008)/Season 01/S01E01.strm",
+        "/mnt/media/Movies",
+        "/mnt/media/Shows",
+        "/mnt/live"
+      ],
+      "expect": "/mnt/media/Shows/Breaking Bad (2008)/Season 01/S01E01.strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/livetv/livetv.m3u",
+        "/mnt/media/Movies",
+        "/mnt/media/Shows",
+        "/mnt/live"
+      ],
+      "expect": "/mnt/live/livetv.m3u"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/movies",
+        "/mnt/media/Movies",
+        "/mnt/media/Shows",
+        "/mnt/live"
+      ],
+      "expect": "/mnt/media/Movies"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/movies_extra/x.strm",
+        "/mnt/media/Movies",
+        "/mnt/media/Shows",
+        "/mnt/live"
+      ],
+      "expect": "/mnt/media/Movies/_extra/x.strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/movies/Blade Runner (1982).strm",
+        null,
+        null,
+        null
+      ],
+      "expect": "/usr/src/app/movies/Blade Runner (1982).strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/movies/a/strm.strm",
+        "",
+        "/mnt/shows",
+        null
+      ],
+      "expect": "/usr/src/app/movies/a/strm.strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/other/x.strm",
+        "/mnt/m",
+        "/mnt/s",
+        "/mnt/l"
+      ],
+      "expect": "/usr/src/app/other/x.strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "movies/x.strm",
+        "/mnt/m",
+        "/mnt/s",
+        "/mnt/l"
+      ],
+      "expect": "movies/x.strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/movies/Blade Runner (1982).strm",
+        "/mnt/m/",
+        "/mnt/s/",
+        "/mnt/l/"
+      ],
+      "expect": "/mnt/m/Blade Runner (1982).strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/mnt/elsewhere/file.strm",
+        "/mnt/m",
+        "/mnt/s",
+        "/mnt/l"
+      ],
+      "expect": "/mnt/elsewhere/file.strm"
+    },
+    {
+      "fn": "convert_to_emby_path",
+      "args": [
+        "/usr/src/app/series/Show/Season 01/S01E01.strm",
+        null,
+        "/srv/Shows",
+        null
+      ],
+      "expect": "/srv/Shows/Show/Season 01/S01E01.strm"
+    }
+  ],
+  "strm_cases": [
+    {
+      "args": [
+        {},
+        "Blade Runner (1982)",
+        "http://h/movie/111.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Blade Runner (1982).strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Blade Runner (1982).strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Blade Runner (1982).strm": "http://h/movie/111.mkv"
+        },
+        "Blade Runner (1982)",
+        "http://h/movie/111.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Blade Runner (1982).strm",
+        "is_new": false,
+        "url_changed": false,
+        "files": {
+          "Blade Runner (1982).strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Blade Runner (1982).strm": "http://h/movie/111.mkv"
+        },
+        "Blade Runner (1982)",
+        "http://h/movie/222.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Blade Runner (1982).strm",
+        "is_new": false,
+        "url_changed": true,
+        "files": {
+          "Blade Runner (1982).strm": "http://h/movie/222.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Blade Runner (1982).strm": ""
+        },
+        "Blade Runner (1982)",
+        "http://h/movie/222.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Blade Runner (1982).strm",
+        "is_new": false,
+        "url_changed": true,
+        "files": {
+          "Blade Runner (1982).strm": "http://h/movie/222.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {},
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie [789012].strm",
+        "is_new": false,
+        "url_changed": false,
+        "files": {
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie [789012].strm": "http://h/old.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie [789012].strm",
+        "is_new": false,
+        "url_changed": true,
+        "files": {
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie [111].strm": "http://h/movie/111.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": false,
+        "url_changed": false,
+        "files": {
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie [789012].strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv",
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": false,
+        "url_changed": true,
+        "files": {
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "not a url"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": false,
+        "url_changed": true,
+        "files": {
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie Extra.strm": "http://h/x.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie Extra.strm": "http://h/x.mkv",
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie Extra.strm": "http://h/x.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie Extra.strm": "http://h/x.mkv",
+          "Big Movie.strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv",
+          "Big Movie Extra.strm": "http://h/x.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/555.mkv",
+        "555"
+      ],
+      "expect": {
+        "path": "Big Movie [555].strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie Extra.strm": "http://h/x.mkv",
+          "Big Movie [555].strm": "http://h/movie/555.mkv",
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv",
+          "Big Movie Extra.strm": "http://h/x.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/555.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": false,
+        "url_changed": true,
+        "files": {
+          "Big Movie Extra.strm": "http://h/x.mkv",
+          "Big Movie.strm": "http://h/movie/555.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/555.mkv",
+        "555"
+      ],
+      "expect": {
+        "path": "Big Movie [555].strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie [555].strm": "http://h/movie/555.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv",
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/111.mkv",
+        "111"
+      ],
+      "expect": {
+        "path": "Big Movie [111].strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv",
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie.strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/789012.mkv",
+        "789012"
+      ],
+      "expect": {
+        "path": "Big Movie [789012].strm",
+        "is_new": false,
+        "url_changed": false,
+        "files": {
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv",
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/333.mkv",
+        "333"
+      ],
+      "expect": {
+        "path": "Big Movie [333].strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [333].strm": "http://h/movie/333.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/111.mkv",
+        "111"
+      ],
+      "expect": {
+        "path": "Big Movie [111].strm",
+        "is_new": false,
+        "url_changed": false,
+        "files": {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv"
+        },
+        "Big Movie",
+        "http://h/movie/111.mkv",
+        null
+      ],
+      "expect": {
+        "path": "Big Movie.strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Big Movie [111].strm": "http://h/movie/111.mkv",
+          "Big Movie [789012].strm": "http://h/movie/789012.mkv",
+          "Big Movie.strm": "http://h/movie/111.mkv"
+        }
+      }
+    },
+    {
+      "args": [
+        {
+          "Season 1.strm": "http://h/s1.mkv"
+        },
+        "Season",
+        "http://h/movie/42.mkv",
+        "42"
+      ],
+      "expect": {
+        "path": "Season.strm",
+        "is_new": true,
+        "url_changed": false,
+        "files": {
+          "Season 1.strm": "http://h/s1.mkv",
+          "Season.strm": "http://h/movie/42.mkv"
+        }
+      }
+    }
+  ]
+}
