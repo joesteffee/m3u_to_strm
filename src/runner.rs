@@ -62,8 +62,7 @@ pub fn download(config: &Config) -> Result<(), String> {
 
     let url = config.m3u_url.as_deref().ok_or("M3U_URL is not set")?;
     log::info(format!("⬇️ Downloading playlist from {url} ({reason})"));
-    let body = http::fetch(url)?;
-    http::write_atomic(tmp, &body)?;
+    http::fetch_to_file(url, tmp)?;
     log::info(format!("✅ Saved to {}", tmp.display()));
     Ok(())
 }

@@ -113,6 +113,9 @@ unRAID does not use SELinux, so `:z` is not needed there.
 **The playlist looks stale** — it is cached at `/tmp/playlist.m3u` inside the container for
 `M3U_CACHE_HOURS` (default 8) hours. Delete that file, or lower the cache time, to force a download.
 
+**The download never finishes** — it gives up after 10 s to connect or 300 s with no data. A partial
+download is never kept, so the next run starts the download again.
+
 ### unRAID
 
 1. Copy the template below to `/boot/config/plugins/dockerMan/templates-user/my-m3u-to-strm.xml`,
